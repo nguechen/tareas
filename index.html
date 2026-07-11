@@ -1428,8 +1428,10 @@ async function ensureToken(){
 async function dFetch(url,opts){
  opts=opts||{};opts.headers=Object.assign({Authorization:'Bearer '+accessToken},opts.headers||{});
  const r=await fetch(url,opts);
- if(r.status===401){accessToken=null;throw new Error('Sesión de Google caducada');}
- if(!r.ok)throw new Error('Google: '+r.status);
+ if(r.status===401){accessToken=null;throw new Error('401 · sesión de Google caducada (reconecta)');}
+ if(!r.ok){let detail='';
+  try{const j=await r.clone().json();detail=(j.error&&(j.error.message||j.error.status))||'';}catch(_){}
+  throw new Error('Google '+r.status+(detail?' · '+detail:''));}
  return r;
 }
 async function findRemote(){
@@ -1512,7 +1514,7 @@ async function calUpsert(t){
  const opt={headers:{'Content-Type':'application/json'},body};
  if(t.gcalId){
   try{await dFetch(CAL_BASE()+'/'+t.gcalId,Object.assign({method:'PATCH'},opt));return;}
-  catch(err){if(!/Google: (404|410)/.test(err.message))throw err;/* evento borrado a mano → recrear */}
+  catch(err){if(!/\b(404|410)\b/.test(err.message))throw err;/* evento borrado a mano → recrear */}
  }
  const r=await dFetch(CAL_BASE(),Object.assign({method:'POST'},opt));
  t.gcalId=(await r.json()).id;
@@ -1520,32 +1522,38 @@ async function calUpsert(t){
 async function calDelete(t){
  if(!t.gcalId)return;
  try{await dFetch(CAL_BASE()+'/'+t.gcalId,{method:'DELETE'});}
- catch(err){if(!/Google: (404|410)/.test(err.message))throw err;}
+ catch(err){if(!/\b(404|410)\b/.test(err.message))throw err;}
  delete t.gcalId;delete t.gcalSig;
 }
 async function pushCalendar(manual){
  if(!D.settings.calSync){if(manual)toast('Activa la sincronización con Calendar');return;}
  if(!navigator.onLine){if(manual)toast('Sin conexión: se enviará al volver internet');return;}
  if(calPushing)return;calPushing=true;syncUI();
- let changed=0,errs=0;
+ let changed=0,errs=0,firstErr='';
+ const wait=ms=>new Promise(r=>setTimeout(r,ms));
  try{
-  if(!await ensureToken())throw new Error('No se pudo autorizar con Google');
+  if(!await ensureToken())throw new Error('No se pudo autorizar con Google (revisa el ID de cliente y acepta el permiso de calendario)');
   // 1) altas/cambios: tareas con fecha
   for(const t of liveTasks()){
    const hasDate=!!dOnly(t.v.date),sig=calSig(t);
    try{
-    if(hasDate){ if(t.gcalId&&t.gcalSig===sig)continue; await calUpsert(t); t.gcalSig=sig; changed++; }
-    else if(t.gcalId){ await calDelete(t); changed++; }
-   }catch(err){errs++;if(/caducada/.test(err.message)){accessToken=null;throw err;}}
+    if(hasDate){ if(t.gcalId&&t.gcalSig===sig)continue; await calUpsert(t); t.gcalSig=sig; changed++; await wait(120); }
+    else if(t.gcalId){ await calDelete(t); changed++; await wait(120); }
+   }catch(err){
+    errs++;if(!firstErr)firstErr=err.message;
+    if(/401|caducada/.test(err.message)){accessToken=null;throw err;}
+    // si falla sistemáticamente (permiso, calendario inexistente…) no insistas 95 veces
+    if(errs>=4)throw new Error('Detenido tras varios fallos. Causa: '+firstErr);
+   }
   }
   // 2) bajas: tareas eliminadas que aún tienen evento
   for(const t of D.tasks.filter(x=>x.deletedAt&&x.gcalId)){
-   try{await calDelete(t);changed++;}catch(err){errs++;}
+   try{await calDelete(t);changed++;await wait(120);}catch(err){errs++;if(!firstErr)firstErr=err.message;}
   }
-  M.calLast=nowISO();M.calError=errs?(errs+' evento(s) con error'):null;
+  M.calLast=nowISO();M.calError=errs?(errs+' con error · '+firstErr):null;
   persist();
-  if(manual)toast(errs?('Calendario: '+errs+' con error'):(changed?('Calendario actualizado ('+changed+')'):'Calendario ya estaba al día'));
- }catch(err){M.calError=err.message;persist();if(manual)toast('Error de Calendar: '+err.message);}
+  if(manual)toast(errs?('Calendar: '+errs+' con error'):(changed?('Calendario actualizado ('+changed+')'):'Calendario ya estaba al día'));
+ }catch(err){M.calError=firstErr||err.message;persist();if(manual)toast('Error de Calendar: '+(firstErr||err.message));}
  calPushing=false;syncUI();
 }
 function scheduleCal(){
