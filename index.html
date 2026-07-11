@@ -194,9 +194,12 @@ tr:hover .openb{opacity:1}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line2);border-radius:8px;padding:9px 16px;z-index:200;box-shadow:var(--shadow);display:none;font-size:13px}
 #toast.show{display:block}
 @media(max-width:700px){
-  #search,#searchMode{display:none}
+  header{flex-wrap:wrap;row-gap:8px}
+  /* fila 1: logo · sincronización · ⚙ · Nuevo ; fila 2 (debajo de sincronización): buscador */
+  .logo,#syncChip,.spacer,#btnSettings,#btnNew{order:1}
+  #search{display:block;order:2;flex:1 1 200px;max-width:none;min-width:0}
+  #searchMode{display:block;order:3;flex:0 0 auto}
   .dprop .dlab{width:100px}
-  header{flex-wrap:wrap}
 }
 </style>
 </head>
