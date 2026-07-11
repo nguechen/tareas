@@ -339,7 +339,7 @@ function defaultDoc(){
    {id:'v_cal',name:'Calendario',icon:'▦',kind:'calendar',smart:null,builtin:1,filters:[],sort:{prop:'date',dir:1},group:null,cols:['name'],updatedAt:0},
    {id:'v_board',name:'Tablero',icon:'▥',kind:'board',smart:'open',builtin:1,filters:[],sort:{prop:'date',dir:1},group:'status',cols:['name','date'],updatedAt:0},
   ],
-  settings:{theme:'dark',accent:'#2383e2',clientId:'',autoSync:true,updatedAt:0},
+  settings:{theme:'dark',accent:'#2383e2',clientId:'',autoSync:true,calSync:false,calId:'primary',updatedAt:0},
  };
 }
 
@@ -372,7 +372,7 @@ function persist(){clearTimeout(persistT);persistT=setTimeout(()=>{idb.set('doc'
 /* guardar: toda mutación pasa por aquí */
 function save(opts){
  opts=opts||{};
- if(!opts.silent){M.pending++;M.lastError=null;scheduleSync();}
+ if(!opts.silent){M.pending++;M.lastError=null;scheduleSync();scheduleCal();}
  persist();syncUI();
  if(!opts.noRender)render();
 }
@@ -1126,6 +1126,17 @@ function openSettings(){
    <label style="min-width:0"><input type="checkbox" id="stAuto" ${s.autoSync?'checked':''}> Sincronización automática</label></div>
   <p class="help" id="stSyncInfo"></p>
  </div>
+ <div class="sect"><h4>Google Calendar (sincronización de una vía)</h4>
+  <p class="help">Cada tarea con <b>fecha</b> creará y mantendrá al día un evento en tu Google Calendar. Al cambiar la fecha, el título o completar la tarea, el evento se actualiza; si borras la tarea o le quitas la fecha, el evento se elimina. Usa el mismo ID de cliente de arriba (verás una nueva pantalla de permiso para el calendario).</p>
+  <div class="row" style="margin-top:8px">
+   <label style="min-width:0"><input type="checkbox" id="stCalOn" ${s.calSync?'checked':''}> Activar sincronización con Calendar</label></div>
+  <div class="row"><label>Calendario destino</label>
+   <input id="stCalId" style="flex:1;min-width:160px" placeholder="primary" value="${esc(s.calId||'primary')}" title="Deja 'primary' para tu calendario principal, o pega el ID de otro calendario (Ajustes del calendario en Google → Integrar calendario → ID de calendario)."></div>
+  <div class="row">
+   <button class="btn primary" id="stCalConnect">${s.calSync?'Reconectar y sincronizar ahora':'Conectar Calendar'}</button>
+   ${s.calSync?'<button class="btn" id="stCalOff">Desactivar</button>':''}</div>
+  <p class="help" id="stCalInfo"></p>
+ </div>
  <div class="sect"><h4>Datos</h4>
   <div class="row">
    <button class="btn" data-ex="json">Exportar JSON</button>
@@ -1157,6 +1168,15 @@ function openSettings(){
  const dc=B.querySelector('#stDisc');if(dc)dc.onclick=()=>{M.driveOn=false;M.driveFileId=null;accessToken=null;persist();syncUI();openSettings();};
  B.querySelector('#stAuto').onchange=e=>{s.autoSync=e.target.checked;s.updatedAt=nowISO();save({silent:true});};
  B.querySelector('#stSyncInfo').textContent=M.lastSync?('Última sincronización: '+fmtDT(M.lastSync)+' · '+M.pending+' cambios pendientes'):'Nunca se ha sincronizado.';
+ B.querySelector('#stCalOn').onchange=e=>{
+  if(e.target.checked){calConnect(true);}
+  else{s.calSync=false;s.updatedAt=nowISO();save({silent:true});openSettings();}};
+ B.querySelector('#stCalId').onchange=e=>{s.calId=e.target.value.trim()||'primary';s.updatedAt=nowISO();save({silent:true});};
+ B.querySelector('#stCalConnect').onclick=()=>calConnect(true);
+ const co=B.querySelector('#stCalOff');if(co)co.onclick=()=>{s.calSync=false;s.updatedAt=nowISO();save({silent:true});openSettings();};
+ B.querySelector('#stCalInfo').textContent=s.calSync
+  ?((M.calError?('⚠ '+M.calError):'Activa')+(M.calLast?(' · última: '+fmtDT(M.calLast)):' · aún sin enviar'))
+  :'Desactivada. Las tareas no se envían al calendario.';
  B.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>doExport(b.dataset.ex));
  B.querySelector('#stImport').onclick=()=>{$('#mSettings').classList.remove('show');openImport();};
  B.querySelector('#stCfgEx').onclick=()=>download('config-tareas.json',JSON.stringify({format:'tareas-config',props:D.props,views:D.views,settings:D.settings},null,1));
@@ -1339,9 +1359,19 @@ function collectOptions(){ /* añade opciones faltantes según valores existente
    (Array.isArray(v)?v:[v]).forEach(x=>ensureOption(p,x));});});
 }
 
-/* ============================ SINCRONIZACIÓN GOOGLE DRIVE ============================ */
+/* ============================ SINCRONIZACIÓN GOOGLE DRIVE / CALENDAR ============================ */
 let accessToken=null,tokenClient=null,syncing=false,syncT=null;
 const DRIVE_FILE='tareas-app.json';
+const SCOPE_DRIVE='https://www.googleapis.com/auth/drive.appdata';
+const SCOPE_CAL='https://www.googleapis.com/auth/calendar.events';
+/* alcance de permisos que pedimos según lo que esté activado */
+function gScopes(){
+ const s=[];
+ if(M.driveOn)s.push(SCOPE_DRIVE);
+ if(D.settings.calSync)s.push(SCOPE_CAL);
+ if(!s.length)s.push(SCOPE_DRIVE);
+ return s.join(' ');
+}
 function loadGSI(){return new Promise((res,rej)=>{
  if(window.google&&google.accounts)return res();
  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';
@@ -1352,23 +1382,44 @@ async function driveConnect(interactive){
  try{
   await loadGSI();
   tokenClient=google.accounts.oauth2.initTokenClient({client_id:cid,
-   scope:'https://www.googleapis.com/auth/drive.appdata',
+   scope:gScopes(),
    callback:resp=>{
     if(resp.error){M.lastError='Autorización rechazada';syncUI();return;}
     accessToken=resp.access_token;M.driveOn=true;M.lastError=null;persist();syncUI();
     syncNow();toast('Google Drive conectado');
+    if(D.settings.calSync)pushCalendar(false);
     const st=$('#stSyncInfo');if(st)openSettings();
    }});
   tokenClient.requestAccessToken({prompt:interactive?'consent':''});
  }catch(err){M.lastError=err.message;syncUI();toast(err.message);}
 }
+/* Autoriza / activa la sincronización con Google Calendar (una vía) */
+async function calConnect(interactive){
+ const cid=D.settings.clientId;
+ if(!cid)return toast('Primero pega tu ID de cliente de Google (ver INSTRUCCIONES.md)');
+ D.settings.calSync=true;D.settings.updatedAt=nowISO();persist();
+ try{
+  await loadGSI();
+  tokenClient=google.accounts.oauth2.initTokenClient({client_id:cid,
+   scope:gScopes(),
+   callback:resp=>{
+    if(resp.error){D.settings.calSync=false;M.lastError='Autorización de Calendar rechazada';syncUI();
+     if($('#settingsBody'))openSettings();return;}
+    accessToken=resp.access_token;M.lastError=null;persist();
+    toast('Google Calendar conectado');
+    pushCalendar(true);
+    if($('#settingsBody'))openSettings();
+   }});
+  tokenClient.requestAccessToken({prompt:interactive?'consent':''});
+ }catch(err){M.lastError=err.message;toast(err.message);}
+}
 async function ensureToken(){
  if(accessToken)return true;
- if(!M.driveOn||!D.settings.clientId)return false;
+ if((!M.driveOn&&!D.settings.calSync)||!D.settings.clientId)return false;
  try{await loadGSI();
   return await new Promise(res=>{
    tokenClient=google.accounts.oauth2.initTokenClient({client_id:D.settings.clientId,
-    scope:'https://www.googleapis.com/auth/drive.appdata',
+    scope:gScopes(),
     callback:r=>{if(r.access_token){accessToken=r.access_token;res(true);}else res(false);}});
    tokenClient.requestAccessToken({prompt:''});
    setTimeout(()=>res(!!accessToken),8000);});
@@ -1378,7 +1429,7 @@ async function dFetch(url,opts){
  opts=opts||{};opts.headers=Object.assign({Authorization:'Bearer '+accessToken},opts.headers||{});
  const r=await fetch(url,opts);
  if(r.status===401){accessToken=null;throw new Error('Sesión de Google caducada');}
- if(!r.ok)throw new Error('Drive: '+r.status);
+ if(!r.ok)throw new Error('Google: '+r.status);
  return r;
 }
 async function findRemote(){
@@ -1431,12 +1482,83 @@ async function syncNow(manual){
  }catch(err){M.lastError=err.message;persist();if(manual)toast('Error de sincronización: '+err.message);}
  syncing=false;syncUI();
 }
+/* ============================ SINCRONIZACIÓN CON GOOGLE CALENDAR (una vía) ============================ */
+let calPushing=false,calT=null;
+/* firma para detectar si una tarea cambió respecto a su evento */
+function calSig(t){return [t.v.name,t.v.date,t.v.desc,t.v.status,isDone(t)?1:0].join('||');}
+/* fecha-hora local en formato RFC3339 con offset (p. ej. 2026-07-15T14:30:00-04:00) */
+function isoLocal(d){
+ const p=n=>String(n).padStart(2,'0');
+ const off=-d.getTimezoneOffset(),sg=off>=0?'+':'-',a=Math.abs(off);
+ return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())+':00'+sg+p(Math.floor(a/60))+':'+p(a%60);
+}
+function calEventBody(t){
+ const parts=[];
+ if(t.v.desc)parts.push(t.v.desc);
+ if(t.v.status)parts.push('Estado: '+t.v.status);
+ if(t.v.prio)parts.push('Prioridad: '+t.v.prio);
+ if(t.v.ctx)parts.push('Contexto: '+t.v.ctx);
+ parts.push('— Creado desde la app Tareas');
+ const body={summary:(isDone(t)?'✓ ':'')+(t.v.name||'Sin título'),description:parts.join('\n')};
+ const dv=t.v.date;
+ if(dv.length>10){const s=new Date(dv),e=new Date(s.getTime()+3600000);
+  body.start={dateTime:isoLocal(s)};body.end={dateTime:isoLocal(e)};}
+ else{body.start={date:dv};body.end={date:addDays(dv,1)};}
+ return body;
+}
+const CAL_BASE=()=>'https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(D.settings.calId||'primary')+'/events';
+async function calUpsert(t){
+ const body=JSON.stringify(calEventBody(t));
+ const opt={headers:{'Content-Type':'application/json'},body};
+ if(t.gcalId){
+  try{await dFetch(CAL_BASE()+'/'+t.gcalId,Object.assign({method:'PATCH'},opt));return;}
+  catch(err){if(!/Google: (404|410)/.test(err.message))throw err;/* evento borrado a mano → recrear */}
+ }
+ const r=await dFetch(CAL_BASE(),Object.assign({method:'POST'},opt));
+ t.gcalId=(await r.json()).id;
+}
+async function calDelete(t){
+ if(!t.gcalId)return;
+ try{await dFetch(CAL_BASE()+'/'+t.gcalId,{method:'DELETE'});}
+ catch(err){if(!/Google: (404|410)/.test(err.message))throw err;}
+ delete t.gcalId;delete t.gcalSig;
+}
+async function pushCalendar(manual){
+ if(!D.settings.calSync){if(manual)toast('Activa la sincronización con Calendar');return;}
+ if(!navigator.onLine){if(manual)toast('Sin conexión: se enviará al volver internet');return;}
+ if(calPushing)return;calPushing=true;syncUI();
+ let changed=0,errs=0;
+ try{
+  if(!await ensureToken())throw new Error('No se pudo autorizar con Google');
+  // 1) altas/cambios: tareas con fecha
+  for(const t of liveTasks()){
+   const hasDate=!!dOnly(t.v.date),sig=calSig(t);
+   try{
+    if(hasDate){ if(t.gcalId&&t.gcalSig===sig)continue; await calUpsert(t); t.gcalSig=sig; changed++; }
+    else if(t.gcalId){ await calDelete(t); changed++; }
+   }catch(err){errs++;if(/caducada/.test(err.message)){accessToken=null;throw err;}}
+  }
+  // 2) bajas: tareas eliminadas que aún tienen evento
+  for(const t of D.tasks.filter(x=>x.deletedAt&&x.gcalId)){
+   try{await calDelete(t);changed++;}catch(err){errs++;}
+  }
+  M.calLast=nowISO();M.calError=errs?(errs+' evento(s) con error'):null;
+  persist();
+  if(manual)toast(errs?('Calendario: '+errs+' con error'):(changed?('Calendario actualizado ('+changed+')'):'Calendario ya estaba al día'));
+ }catch(err){M.calError=err.message;persist();if(manual)toast('Error de Calendar: '+err.message);}
+ calPushing=false;syncUI();
+}
+function scheduleCal(){
+ if(!D.settings.calSync)return;
+ clearTimeout(calT);calT=setTimeout(()=>pushCalendar(false),4000);
+}
 function scheduleSync(){
  if(!M.driveOn||!D.settings.autoSync)return;
  clearTimeout(syncT);syncT=setTimeout(()=>syncNow(false),8000);
 }
 setInterval(()=>{if(M.driveOn&&D&&D.settings.autoSync&&M.pending>0)syncNow(false);},90000);
-addEventListener('online',()=>{syncUI();if(M.driveOn&&M.pending>0)syncNow(false);});
+setInterval(()=>{if(D&&D.settings.calSync&&navigator.onLine)pushCalendar(false);},120000);
+addEventListener('online',()=>{syncUI();if(M.driveOn&&M.pending>0)syncNow(false);if(D&&D.settings.calSync)pushCalendar(false);});
 addEventListener('offline',syncUI);
 
 function syncUI(){
@@ -1508,6 +1630,7 @@ async function boot(){
  cur=(D.views.find(v=>!v.hidden)||D.views[0]).id;
  render();syncUI();
  if(M.driveOn&&D.settings.autoSync&&navigator.onLine)setTimeout(()=>syncNow(false),1500);
+ if(D.settings.calSync&&navigator.onLine)setTimeout(()=>pushCalendar(false),2500);
  if('serviceWorker'in navigator){try{navigator.serviceWorker.register('sw.js');}catch(_){}}
 }
 boot();
