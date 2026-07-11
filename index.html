@@ -46,6 +46,7 @@ header{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1
 .dot{width:8px;height:8px;border-radius:50%;background:var(--tx3);flex:none}
 .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.err{background:var(--err)}
 #search{flex:1;max-width:340px;background:var(--bg2);border-color:var(--line)}
+#searchMode{font-size:12px;padding:5px 9px;flex:none}
 .spacer{flex:1}
 .btn{padding:5px 11px;border-radius:var(--r);border:1px solid var(--line2);background:var(--bg2);white-space:nowrap}
 .btn:hover{background:var(--bg3)}
@@ -193,7 +194,7 @@ tr:hover .openb{opacity:1}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line2);border-radius:8px;padding:9px 16px;z-index:200;box-shadow:var(--shadow);display:none;font-size:13px}
 #toast.show{display:block}
 @media(max-width:700px){
-  #search{display:none}
+  #search,#searchMode{display:none}
   .dprop .dlab{width:100px}
   header{flex-wrap:wrap}
 }
@@ -204,6 +205,7 @@ tr:hover .openb{opacity:1}
   <div class="logo"><span class="mark">✓</span> Tareas</div>
   <button id="syncChip" title="Estado de sincronización"><span class="dot" id="syncDot"></span><span id="syncTxt">Local</span></button>
   <input id="search" placeholder="Buscar tareas…  ( / )">
+  <button id="searchMode" class="btn" title="Alcance de la búsqueda">🔍 Vista</button>
   <div class="spacer"></div>
   <button class="iconbtn" id="btnSettings" title="Configuración">⚙</button>
   <button class="btn primary" id="btnNew">Nuevo</button>
@@ -345,6 +347,7 @@ let cur='v_all';            // vista activa
 let selIds=new Set();       // selección múltiple
 let openId=null;            // tarea abierta en drawer
 let searchQ='';
+let searchGlobal=false;     // false = buscar dentro de la vista (respeta filtros) · true = en TODAS las tareas
 let calMonth=null;          // 'YYYY-MM'
 let showN=200;              // paginación
 let collapsed=new Set();    // grupos colapsados
@@ -449,8 +452,19 @@ function passFilter(f,t){
   default:return true;
  }
 }
+function matchFilters(v,t){
+ if(!v.filters||!v.filters.length)return true;
+ // filterJoin:'or' => basta con cumplir UNO · por defecto 'and' => cumplir TODOS (compatible)
+ return v.filterJoin==='or'
+   ? v.filters.some(f=>passFilter(f,t))
+   : v.filters.every(f=>passFilter(f,t));
+}
 function viewTasks(v){
- let list=liveTasks().filter(t=>smartMatch(v.smart,t)&&v.filters.every(f=>passFilter(f,t)));
+ // Búsqueda global: ignora temporalmente el "smart" y los filtros de la vista
+ const globalSearch=searchQ&&searchGlobal;
+ let list=globalSearch
+   ? liveTasks().slice()
+   : liveTasks().filter(t=>smartMatch(v.smart,t)&&matchFilters(v,t));
  if(searchQ){const q=searchQ.toLowerCase();
   list=list.filter(t=>['name','desc','notes'].some(k=>String(t.v[k]||'').toLowerCase().includes(q)));}
  const sp=v.sort&&prop(v.sort.prop);
@@ -849,13 +863,19 @@ function propEditor(p){
 }
 
 /* ---------- CALENDARIO ---------- */
+/* Abre el MISMO drawer de creación que el resto de vistas, con la fecha ya puesta */
+function calNewTask(date){
+ const t=newTask(date?{date}:{});
+ save();openDrawer(t.id);
+ setTimeout(()=>$('#dTitle').focus(),60);
+}
 function renderCal(main,v){
  if(!calMonth)calMonth=todayStr().slice(0,7);
  const[y,m]=calMonth.split('-').map(Number);
  const first=new Date(y,m-1,1);
  const start=new Date(first);start.setDate(1-((first.getDay()+6)%7)); // lunes
  const tasksByDay={};
- liveTasks().filter(t=>v.filters.every(f=>passFilter(f,t))).forEach(t=>{
+ liveTasks().filter(t=>matchFilters(v,t)).forEach(t=>{
   const d=dOnly(t.v.date);if(!d)return;(tasksByDay[d]=tasksByDay[d]||[]).push(t);});
  const monthName=first.toLocaleDateString('es',{month:'long',year:'numeric'});
  let html=`<div id="cal"><div class="cal-head">
@@ -876,7 +896,7 @@ function renderCal(main,v){
    ${shown.map(t=>{const st=optOf(statusProp(),t.v.status);
      return`<div class="chip ${isOverdue(t)?'od':''} ${isDone(t)?'dn':''}" draggable="true" data-chip="${t.id}" title="${esc(t.v.name)}"><span class="cdot" style="background:${cvar(st?st.color:'gray')}"></span>${esc(t.v.name)||'Sin título'}</div>`;}).join('')}
    ${dayTasks.length>4&&!exp?`<button class="chip" data-more="${ds}" style="cursor:pointer;color:var(--tx2)">+${dayTasks.length-4} más</button>`:''}
-   <input class="qadd" data-q="${ds}" placeholder="＋ tarea">
+   <button class="qadd" data-q="${ds}" title="Nueva tarea este día">＋ tarea</button>
   </div>`;
  }
  html+='</div></div>';
@@ -898,9 +918,7 @@ function renderCal(main,v){
    setVal(t,'date',cd.dataset.day+tm);toast('Fecha cambiada a '+fmtDate(cd.dataset.day));};
  });
  main.querySelectorAll('.qadd').forEach(q=>{
-  q.onkeydown=e=>{if(e.key==='Enter'&&q.value.trim()){
-   newTask({name:q.value.trim(),date:q.dataset.q});save();toast('Tarea creada');}
-   if(e.key==='Escape')q.blur();};
+  q.onclick=e=>{e.stopPropagation();calNewTask(q.dataset.q);};
  });
 }
 
@@ -989,18 +1007,30 @@ $('#pFilter').onclick=e=>{
    <select data-fo="${i}">${opsFor(p).map(o=>`<option value="${o}" ${f.op===o?'selected':''}>${OPS[o]}</option>`).join('')}</select>
    ${valIn}<button data-fx="${i}">✕</button></div>`;};
  openPop(`
-  <div class="mhead">Filtros (se cumplen todos)</div>
+  <div class="mhead">Coincidencia</div>
+  <div class="mi" style="cursor:default;gap:6px">
+   <button class="btn ${v.filterJoin!=='or'?'primary':''}" id="fJoinAnd" style="font-size:12px;padding:2px 9px">Todos (Y)</button>
+   <button class="btn ${v.filterJoin==='or'?'primary':''}" id="fJoinOr" style="font-size:12px;padding:2px 9px">Cualquiera (O)</button>
+  </div>
+  <div class="mhead">Filtros${v.filterJoin==='or'?' · se cumple al menos uno':' · se cumplen todos'}</div>
   ${v.filters.map(row).join('')||'<div class="mi" style="color:var(--tx3);cursor:default">Sin filtros</div>'}
   <div class="msep"></div>
   <button class="mi" id="fAdd"><span class="mic">＋</span>Agregar filtro</button>
+  <button class="mi" id="fPreset"><span class="mic">⚡</span>Preset: Hoy + Vencidas (O)</button>
   ${v.filters.length?'<button class="mi" id="fClear"><span class="mic">✕</span>Quitar todos</button>':''}
  `,e.target,pp=>{
   const upd=()=>{v.updatedAt=nowISO();save({noRender:false});closePop();$('#pFilter').click();};
+  const jA=pp.querySelector('#fJoinAnd'),jO=pp.querySelector('#fJoinOr');
+  if(jA)jA.onclick=()=>{v.filterJoin='and';upd();};
+  if(jO)jO.onclick=()=>{v.filterJoin='or';upd();};
   pp.querySelectorAll('[data-fp]').forEach(s=>s.onchange=()=>{const f=v.filters[+s.dataset.fp];f.prop=s.value;f.op=opsFor(prop(s.value))[0];f.value='';upd();});
   pp.querySelectorAll('[data-fo]').forEach(s=>s.onchange=()=>{v.filters[+s.dataset.fo].op=s.value;upd();});
   pp.querySelectorAll('[data-fv]').forEach(s=>s.onchange=()=>{v.filters[+s.dataset.fv].value=s.value;v.updatedAt=nowISO();save();});
   pp.querySelectorAll('[data-fx]').forEach(b=>b.onclick=()=>{v.filters.splice(+b.dataset.fx,1);upd();});
   pp.querySelector('#fAdd').onclick=()=>{v.filters.push({prop:'status',op:'eq',value:''});upd();};
+  const fpre=pp.querySelector('#fPreset');
+  if(fpre)fpre.onclick=()=>{v.filterJoin='or';
+   v.filters=[{prop:'date',op:'today',value:''},{prop:'date',op:'overdue',value:''}];upd();};
   const fc=pp.querySelector('#fClear');if(fc)fc.onclick=()=>{v.filters=[];v.updatedAt=nowISO();save();closePop();};
  });
 };
@@ -1440,6 +1470,15 @@ $('#syncChip').onclick=e=>{
 $('#btnNew').onclick=()=>{const t=newTask(view(cur).smart==='today'?{date:todayStr()}:{});save();openDrawer(t.id);setTimeout(()=>$('#dTitle').focus(),60);};
 $('#btnSettings').onclick=openSettings;
 $('#search').oninput=e=>{searchQ=e.target.value.trim();showN=200;renderMain();renderToolbar();};
+function updSearchModeBtn(){const b=$('#searchMode');if(!b)return;
+ b.textContent=searchGlobal?'🌐 Global':'🔍 Vista';
+ b.classList.toggle('primary',searchGlobal);
+ b.title=searchGlobal
+   ? 'Búsqueda en TODAS las tareas (ignora los filtros de la vista)'
+   : 'Búsqueda dentro de la vista actual (respeta sus filtros)';}
+$('#searchMode').onclick=()=>{searchGlobal=!searchGlobal;updSearchModeBtn();
+ if(searchQ){showN=200;renderMain();renderToolbar();}};
+updSearchModeBtn();
 $$('.overlay').forEach(o=>{o.onclick=e=>{if(e.target===o||e.target.closest('[data-close]'))o.classList.remove('show');};});
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){closePop();closeDrawer();$$('.overlay').forEach(o=>o.classList.remove('show'));}
