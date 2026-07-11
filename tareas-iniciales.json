@@ -1,0 +1,1237 @@
+{
+ "format": "tareas-app",
+ "version": 1,
+ "tasks": [
+  {
+   "id": "t_597ae6d47c",
+   "v": {
+    "name": "Hora Cardio",
+    "date": "2026-10-01",
+    "status": "Agenda",
+    "desc": "pastilla y otros",
+    "prio": "Alta",
+    "ctx": "🛻Calle",
+    "area": "Salud",
+    "energy": "Medium",
+    "notes": "Cardio 26/5 (https://app.notion.com/p/Cardio-26-5-36bffb90afbd80d9867bca0d43d23d0d?pvs=21)"
+   },
+   "createdAt": "2026-05-23T16:40",
+   "updatedAt": "2026-06-30T09:41"
+  },
+  {
+   "id": "t_9648e03d70",
+   "v": {
+    "name": "Hora oftalmo (con topografia)",
+    "date": "2026-08-20T14:30",
+    "status": "Agenda",
+    "desc": "cambio lentes",
+    "prio": "Alta",
+    "ctx": "🛻Calle",
+    "area": "Salud",
+    "energy": "Low",
+    "notes": "Oftalmo 18/6 (https://app.notion.com/p/Oftalmo-18-6-36bffb90afbd800ea233c7801b558c1d?pvs=21)",
+    "project": "Operación del ojo"
+   },
+   "createdAt": "2026-05-23T17:12",
+   "updatedAt": "2026-06-19T09:37"
+  },
+  {
+   "id": "t_a07b36960d",
+   "v": {
+    "name": "recojer pañales ",
+    "date": "2026-05-26",
+    "status": "Completada",
+    "desc": "Para seguimiento de pañales",
+    "prio": "Media",
+    "ctx": "🏡Casa",
+    "area": "Familia",
+    "energy": "Low",
+    "url": "pilucho.cl/producto/packs/"
+   },
+   "createdAt": "2026-05-24T03:33",
+   "updatedAt": "2026-05-28T23:32"
+  },
+  {
+   "id": "t_b07a1e598e",
+   "v": {
+    "name": "Hora Otorrino",
+    "date": "2026-07-15",
+    "status": "A la espera",
+    "desc": "lista rnm, sacar hora",
+    "area": "Salud, Vida personal",
+    "energy": "Low",
+    "notes": "Otorrino 25/5 (https://app.notion.com/p/Otorrino-25-5-36bffb90afbd80e3bb85e127fb000ca3?pvs=21)"
+   },
+   "createdAt": "2026-05-25T12:31",
+   "updatedAt": "2026-07-01T12:54"
+  },
+  {
+   "id": "t_672616b8a9",
+   "v": {
+    "name": "Hacer audiometría",
+    "date": "2026-05-25T15:30",
+    "status": "Completada",
+    "prio": "Alta",
+    "ctx": "🛻Calle",
+    "area": "Salud",
+    "energy": "Low"
+   },
+   "createdAt": "2026-05-25T12:33",
+   "updatedAt": "2026-05-26T13:59"
+  },
+  {
+   "id": "t_d85c48e610",
+   "v": {
+    "name": "Procesar notas tomadas de pausa",
+    "date": "2026-07-06",
+    "status": "Acción",
+    "desc": "ver que hacer con las que faltan",
+    "tags": [
+     "1-1",
+     "CLIMA"
+    ],
+    "url": "https://tally.so/r/0QDq59",
+    "notes": "Notas de semáforo (https://app.notion.com/p/Notas-de-sem-foro-36cffb90afbd80a382cdcbad89d69ae3?pvs=21)"
+   },
+   "createdAt": "2026-05-26T14:07",
+   "updatedAt": "2026-07-01T13:08"
+  },
+  {
+   "id": "t_7d8eac1087",
+   "v": {
+    "name": "foto de equipo",
+    "date": "2026-07-03",
+    "status": "Agenda",
+    "desc": "nunca la sacamos"
+   },
+   "createdAt": "2026-05-26T16:22",
+   "updatedAt": "2026-06-26T09:46"
+  },
+  {
+   "id": "t_4da706f354",
+   "v": {
+    "name": "foto individual nuevos",
+    "date": "2026-06-17",
+    "status": "En proceso",
+    "desc": "se solicita la  foto, esperando que la manden"
+   },
+   "createdAt": "2026-05-26T16:23",
+   "updatedAt": "2026-06-24T08:29"
+  },
+  {
+   "id": "t_c2d0c37d8a",
+   "v": {
+    "name": "Guía rápida esu, plastificar",
+    "status": "Completada",
+    "prio": "Baja",
+    "ctx": "💻PC/oficina",
+    "area": "Clima laboral",
+    "energy": "Low"
+   },
+   "createdAt": "2026-05-26T17:19",
+   "updatedAt": "2026-05-28T08:38"
+  },
+  {
+   "id": "t_213374de96",
+   "v": {
+    "name": "Ordenar escritorio",
+    "date": "2026-07-02",
+    "status": "Acción"
+   },
+   "createdAt": "2026-05-27T08:41",
+   "updatedAt": "2026-07-01T13:03"
+  },
+  {
+   "id": "t_2dba92e76d",
+   "v": {
+    "name": "Navegadores",
+    "date": "2026-07-15",
+    "status": "Agenda",
+    "desc": "se hace en julio la baja",
+    "tags": [
+     "BODEGA-2"
+    ],
+    "area": "Bodegas"
+   },
+   "createdAt": "2026-05-27T18:42",
+   "updatedAt": "2026-06-26T09:47"
+  },
+  {
+   "id": "t_4ab5fb9da8",
+   "v": {
+    "name": "Ordenar todo esto",
+    "status": "Completada"
+   },
+   "createdAt": "2026-05-27T23:33",
+   "updatedAt": "2026-05-28T09:46"
+  },
+  {
+   "id": "t_5c178cb622",
+   "v": {
+    "name": "Dea vitacura",
+    "date": "2026-06-16",
+    "status": "Completada",
+    "desc": "Falta OC"
+   },
+   "createdAt": "2026-05-28T08:40",
+   "updatedAt": "2026-06-16T15:42"
+  },
+  {
+   "id": "t_c51fda3cba",
+   "v": {
+    "name": "ots",
+    "status": "Completada"
+   },
+   "createdAt": "2026-05-28T08:41",
+   "updatedAt": "2026-05-28T09:47"
+  },
+  {
+   "id": "t_4f8a8fb24a",
+   "v": {
+    "name": "HULE oc PENDIENTE",
+    "date": "2026-07-02",
+    "status": "A la espera",
+    "desc": "hacer OC",
+    "tags": [
+     "BODEGA-5"
+    ]
+   },
+   "createdAt": "2026-05-28T08:53",
+   "updatedAt": "2026-07-01T13:09"
+  },
+  {
+   "id": "t_64aa35cdb0",
+   "v": {
+    "name": "Cuadernillo aec seguimiento de aprobación ",
+    "date": "2026-06-22",
+    "status": "Completada",
+    "desc": "en panel de Diego"
+   },
+   "createdAt": "2026-05-28T08:56",
+   "updatedAt": "2026-06-18T13:08"
+  },
+  {
+   "id": "t_4f2f3bc6e0",
+   "v": {
+    "name": "sacar gabinete vitacura (agendar con Robin)",
+    "date": "2026-06-04",
+    "status": "Completada"
+   },
+   "createdAt": "2026-05-28T09:07",
+   "updatedAt": "2026-06-05T08:18"
+  },
+  {
+   "id": "t_9181f096fc",
+   "v": {
+    "name": "DEA puertas gabinete ",
+    "date": "2026-07-02",
+    "status": "A la espera",
+    "desc": "espera aprobacion"
+   },
+   "createdAt": "2026-05-28T09:08",
+   "updatedAt": "2026-07-01T13:09"
+  },
+  {
+   "id": "t_734d554c95",
+   "v": {
+    "name": "revisar carpetas doc ELi",
+    "date": "2026-07-01",
+    "status": "A la espera",
+    "desc": "espero la vale"
+   },
+   "createdAt": "2026-05-28T09:09",
+   "updatedAt": "2026-06-23T20:01"
+  },
+  {
+   "id": "t_6584a70e8f",
+   "v": {
+    "name": "demarcar -5c",
+    "date": "2026-07-15",
+    "status": "Algún día",
+    "desc": "es un proyecto",
+    "prio": "Media"
+   },
+   "createdAt": "2026-05-28T09:10",
+   "updatedAt": "2026-06-26T09:44"
+  },
+  {
+   "id": "t_98a36f62de",
+   "v": {
+    "name": "demarcar bodega de archivos",
+    "date": "2026-07-15",
+    "status": "En proceso",
+    "desc": "METER MAS COSAS"
+   },
+   "createdAt": "2026-05-28T09:10",
+   "updatedAt": "2026-06-26T09:44"
+  },
+  {
+   "id": "t_ee6e360624",
+   "v": {
+    "name": "BIS retorno",
+    "date": "2026-07-02",
+    "status": "Acción",
+    "desc": "Acer OCS",
+    "tags": [
+     "CORREO"
+    ]
+   },
+   "createdAt": "2026-05-28T09:22",
+   "updatedAt": "2026-07-01T13:08"
+  },
+  {
+   "id": "t_d5c29d392b",
+   "v": {
+    "name": "monitorear mp e10 gine preguntar al José",
+    "date": "2026-06-16",
+    "status": "Completada",
+    "desc": "preguntar vale"
+   },
+   "createdAt": "2026-05-28T09:33",
+   "updatedAt": "2026-06-16T14:57"
+  },
+  {
+   "id": "t_21dff48ebd",
+   "v": {
+    "name": "Congelador Jorge",
+    "date": "2026-07-02",
+    "status": "A la espera",
+    "desc": "pabellon debe responder",
+    "tags": [
+     "1-1"
+    ]
+   },
+   "createdAt": "2026-05-28T09:48",
+   "updatedAt": "2026-07-01T13:08"
+  },
+  {
+   "id": "t_5b3b7a7b16",
+   "v": {
+    "name": "slt patita",
+    "date": "2026-06-01",
+    "status": "Completada",
+    "prio": "Baja",
+    "ctx": "💻PC/oficina"
+   },
+   "createdAt": "2026-05-28T10:14",
+   "updatedAt": "2026-06-01T15:39"
+  },
+  {
+   "id": "t_fe96dc0ba2",
+   "v": {
+    "name": "stl gancho seba",
+    "date": "2026-06-05",
+    "status": "Completada",
+    "prio": "Baja",
+    "ctx": "💻PC/oficina",
+    "area": "Clima laboral",
+    "energy": "Low"
+   },
+   "createdAt": "2026-05-28T10:59",
+   "updatedAt": "2026-06-05T10:15"
+  },
+  {
+   "id": "t_be75827e39",
+   "v": {
+    "name": "Cunas, ver reparación",
+    "date": "2026-07-06",
+    "status": "Archivo de seguimiento",
+    "desc": "Victor debe sacarlas"
+   },
+   "createdAt": "2026-05-28T13:30",
+   "updatedAt": "2026-07-01T13:08"
+  },
+  {
+   "id": "t_359960877f",
+   "v": {
+    "name": "Fabius en bodega (preguntar Mati)",
+    "date": "2026-06-01",
+    "status": "Completada"
+   },
+   "createdAt": "2026-05-28T13:40",
+   "updatedAt": "2026-06-01T11:20"
+  },
+  {
+   "id": "t_a4de4babe6",
+   "v": {
+    "name": "Ver torre con Jorge",
+    "date": "2026-07-27",
+    "status": "A la espera",
+    "desc": "panel de Nico ",
+    "tags": [
+     "1-1"
+    ]
+   },
+   "createdAt": "2026-05-28T13:51",
+   "updatedAt": "2026-06-25T11:59"
+  },
+  {
+   "id": "t_ccaab51737",
+   "v": {
+    "name": "Link vainilla máquina de café ",
+    "date": "2026-07-07",
+    "status": "Archivo de seguimiento",
+    "desc": "preguntar a  nicolas",
+    "tags": [
+     "1-1"
+    ]
+   },
+   "createdAt": "2026-05-28T13:56",
+   "updatedAt": "2026-06-23T20:00"
+  },
+  {
+   "id": "t_e1f38a64d6",
+   "v": {
+    "name": "Preguntar Flujo de oc parches dea",
+    "date": "2026-06-03",
+    "status": "Completada"
+   },
+   "createdAt": "2026-05-28T17:51",
+   "updatedAt": "2026-06-03T08:33"
+  },
+  {
+   "id": "t_03576fee0d",
+   "v": {
+    "name": "Vender ac (preguntar alolitech)",
+    "date": "2026-06-22",
+    "status": "A la espera",
+    "desc": "preguntar",
+    "prio": "Media",
+    "area": "Familia"
+   },
+   "createdAt": "2026-05-29T11:18",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_1bde93b077",
+   "v": {
+    "name": "Ropa Manuel ciber",
+    "date": "2026-06-03",
+    "status": "Completada",
+    "prio": "Media",
+    "ctx": "📱Móvil",
+    "area": "Familia",
+    "energy": "Low"
+   },
+   "createdAt": "2026-05-29T22:44",
+   "updatedAt": "2026-06-03T08:11"
+  },
+  {
+   "id": "t_355ffe07cb",
+   "v": {
+    "name": "Tarea Manuel ",
+    "date": "2026-06-01",
+    "status": "Completada",
+    "prio": "Media",
+    "ctx": "📱Móvil",
+    "area": "Familia",
+    "energy": "Low"
+   },
+   "createdAt": "2026-05-29T22:46",
+   "updatedAt": "2026-06-02T09:04"
+  },
+  {
+   "id": "t_3c8e5769ca",
+   "v": {
+    "name": "Averiguar que contenidos tenía metodologías agiles",
+    "status": "A la espera"
+   },
+   "createdAt": "2026-05-30T07:24",
+   "updatedAt": "2026-06-23T14:23"
+  },
+  {
+   "id": "t_3151db8e18",
+   "v": {
+    "name": "tarea manuel",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-01T08:50",
+   "updatedAt": "2026-06-02T08:37"
+  },
+  {
+   "id": "t_d55a43d05b",
+   "v": {
+    "name": "Cambiar parche de los DEA",
+    "date": "2026-06-22",
+    "status": "Completada",
+    "desc": "parches y stiker listo"
+   },
+   "createdAt": "2026-06-01T09:06",
+   "updatedAt": "2026-06-25T11:57"
+  },
+  {
+   "id": "t_9f35d86c31",
+   "v": {
+    "name": "LISTADO DE OCS",
+    "date": "2026-06-02",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-01T10:24",
+   "updatedAt": "2026-06-03T15:29"
+  },
+  {
+   "id": "t_9423f23a9b",
+   "v": {
+    "name": "coparar estufa, cañon cosina",
+    "date": "2026-06-03",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-01T11:25",
+   "updatedAt": "2026-06-03T15:33"
+  },
+  {
+   "id": "t_c3944b0aa8",
+   "v": {
+    "name": "numeros seba",
+    "date": "2026-06-02",
+    "status": "Completada",
+    "prio": "Alta",
+    "ctx": "💻PC/oficina",
+    "area": "Clima laboral"
+   },
+   "createdAt": "2026-06-01T12:04",
+   "updatedAt": "2026-06-02T15:37"
+  },
+  {
+   "id": "t_33ee732e41",
+   "v": {
+    "name": "estiker eqm carro jose",
+    "date": "2026-06-02",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-01T12:20",
+   "updatedAt": "2026-06-03T08:11"
+  },
+  {
+   "id": "t_2ce0ae9a69",
+   "v": {
+    "name": "Tele mati",
+    "date": "2026-07-06",
+    "status": "A la espera",
+    "desc": "romi pedirá",
+    "tags": [
+     "BODEGA-2"
+    ]
+   },
+   "createdAt": "2026-06-01T13:58",
+   "updatedAt": "2026-07-01T13:03"
+  },
+  {
+   "id": "t_3144e53c55",
+   "v": {
+    "name": "10:30 ajs que vea la sala de reuniones",
+    "date": "2026-06-08T10:30",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-01T17:32",
+   "updatedAt": "2026-06-09T14:28"
+  },
+  {
+   "id": "t_934284c0be",
+   "v": {
+    "name": "correo dea dominocos",
+    "date": "2026-06-03",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-01T17:33",
+   "updatedAt": "2026-06-03T08:33"
+  },
+  {
+   "id": "t_3f31161ae8",
+   "v": {
+    "name": "Preguntar por pinza mujer",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-01T17:46",
+   "updatedAt": "2026-06-03T15:36"
+  },
+  {
+   "id": "t_50bd75bded",
+   "v": {
+    "name": "HACER PEDIDO de bodega",
+    "date": "2026-06-16",
+    "status": "Completada",
+    "desc": "deben armarlo"
+   },
+   "createdAt": "2026-06-02T09:33",
+   "updatedAt": "2026-06-16T14:49"
+  },
+  {
+   "id": "t_89debeb05a",
+   "v": {
+    "name": "SEGUIMIENTO GASES BODEGA -2",
+    "date": "2026-07-07",
+    "status": "Archivo de seguimiento",
+    "desc": "se dio el vamos",
+    "prio": "Media",
+    "ctx": "💻PC/oficina",
+    "tags": [
+     "1-1",
+     "BODEGA-2"
+    ]
+   },
+   "createdAt": "2026-06-02T16:06",
+   "updatedAt": "2026-06-26T09:48"
+  },
+  {
+   "id": "t_fc51df1f46",
+   "v": {
+    "name": "instalar dea los dom",
+    "date": "2026-06-30",
+    "status": "A la espera",
+    "desc": "pedir a robin que lo lleve"
+   },
+   "createdAt": "2026-06-02T17:09",
+   "updatedAt": "2026-06-23T19:51"
+  },
+  {
+   "id": "t_35a0d893e4",
+   "v": {
+    "name": "llaves cunas",
+    "date": "2026-06-03",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-03T08:11",
+   "updatedAt": "2026-06-03T08:16"
+  },
+  {
+   "id": "t_b14ae6548f",
+   "v": {
+    "name": "catrasto de accesorios",
+    "date": "2026-06-10",
+    "status": "Completada",
+    "prio": "Media"
+   },
+   "createdAt": "2026-06-03T08:13",
+   "updatedAt": "2026-06-10T09:44"
+  },
+  {
+   "id": "t_3d2b6453c1",
+   "v": {
+    "name": "REVISAR MULTIMED",
+    "date": "2026-06-09",
+    "status": "Completada",
+    "desc": "se deben devolver"
+   },
+   "createdAt": "2026-06-03T09:50",
+   "updatedAt": "2026-06-10T15:44"
+  },
+  {
+   "id": "t_518bb48ba3",
+   "v": {
+    "name": "revisar que realicen mp cnaf",
+    "date": "2026-06-16",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-03T13:31",
+   "updatedAt": "2026-06-16T15:05"
+  },
+  {
+   "id": "t_d16c14d000",
+   "v": {
+    "name": "Taller 2do cerebro",
+    "date": "2026-06-05",
+    "status": "Completada",
+    "desc": "recopila las notas",
+    "prio": "Urgente",
+    "notes": "🌟 La Meta: Recordar, Conectar y Crear (https://app.notion.com/p/La-Meta-Recordar-Conectar-y-Crear-372ffb90afbd80729448f228bcc92b6c?pvs=21), Clase 2do cerebro  (https://app.notion.com/p/Clase-2do-cerebro-371ffb90afbd80639fc2f55777b8c130?pvs=21), 2do cerebro mejor aproach (https://app.notion.com/p/2do-cerebro-mejor-aproach-372ffb90afbd80bd8fb6e886f9723812?pvs=21), Accion/Referencia (https://app.notion.com/p/Accion-Referencia-376ffb90afbd80cfbeb8c7ab08c0365d?pvs=21)"
+   },
+   "createdAt": "2026-06-04T13:56",
+   "updatedAt": "2026-06-05T16:03"
+  },
+  {
+   "id": "t_e650e33f80",
+   "v": {
+    "name": "listado de accesorios para banmedica",
+    "date": "2026-06-05",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-05T08:11",
+   "updatedAt": "2026-06-09T16:31"
+  },
+  {
+   "id": "t_d0c3be0428",
+   "v": {
+    "name": "Serie cámara laparo",
+    "date": "2026-06-15",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-05T11:25",
+   "updatedAt": "2026-06-12T16:00"
+  },
+  {
+   "id": "t_dad6a28567",
+   "v": {
+    "name": "Cartel cama operativa",
+    "date": "2026-06-24",
+    "status": "Completada",
+    "desc": "Instalar"
+   },
+   "createdAt": "2026-06-05T14:11",
+   "updatedAt": "2026-06-26T09:37"
+  },
+  {
+   "id": "t_cd2c2a2327",
+   "v": {
+    "name": "Cambiar credencial",
+    "date": "2026-06-15",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-05T14:41",
+   "updatedAt": "2026-06-12T15:59"
+  },
+  {
+   "id": "t_42c4abad79",
+   "v": {
+    "name": "Bombas Braun",
+    "date": "2026-07-01",
+    "status": "Archivo de seguimiento",
+    "desc": "SE PUEDEN SACAR SIN PROBLEMA",
+    "tags": [
+     "BODEGA-2"
+    ]
+   },
+   "createdAt": "2026-06-05T14:44",
+   "updatedAt": "2026-06-26T09:25"
+  },
+  {
+   "id": "t_3a08241802",
+   "v": {
+    "name": "sharepoint eqm",
+    "date": "2026-07-07",
+    "status": "Inbox",
+    "tags": [
+     "1-1"
+    ]
+   },
+   "createdAt": "2026-06-05T15:45",
+   "updatedAt": "2026-06-26T11:36"
+  },
+  {
+   "id": "t_896783e654",
+   "v": {
+    "name": "pedir dia a tini",
+    "date": "2026-06-08",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-05T15:57",
+   "updatedAt": "2026-06-09T16:31"
+  },
+  {
+   "id": "t_5a44897a63",
+   "v": {
+    "name": "Investigar cómo se arregla aro de Cosina electrica ",
+    "date": "2026-06-15",
+    "status": "Algún día",
+    "desc": "modelo Me 4e",
+    "area": "Vida personal"
+   },
+   "createdAt": "2026-06-05T18:56",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_6a3ca1f96d",
+   "v": {
+    "name": "Obsdian programa de cerebro",
+    "date": "2026-06-15",
+    "status": "Algún día",
+    "desc": "averiguar",
+    "area": "Vida personal"
+   },
+   "createdAt": "2026-06-06T21:37",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_4a5102a70a",
+   "v": {
+    "name": "Preguntar vale por el turno",
+    "date": "2026-06-15",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-07T21:32",
+   "updatedAt": "2026-06-12T15:52"
+  },
+  {
+   "id": "t_507bf4dadc",
+   "v": {
+    "name": "seguimiento retiro montador",
+    "date": "2026-07-02",
+    "status": "Algún día",
+    "desc": "correo enviado a OP",
+    "tags": [
+     "1-1"
+    ]
+   },
+   "createdAt": "2026-06-08T08:15",
+   "updatedAt": "2026-07-01T13:08"
+  },
+  {
+   "id": "t_cfac13da7e",
+   "v": {
+    "name": "PCA oc en espera",
+    "date": "2026-07-02",
+    "status": "A la espera",
+    "desc": "en espera de entrega"
+   },
+   "createdAt": "2026-06-08T17:02",
+   "updatedAt": "2026-07-01T13:09"
+  },
+  {
+   "id": "t_0e443d264c",
+   "v": {
+    "name": "anato",
+    "date": "2026-06-10",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-09T11:50",
+   "updatedAt": "2026-06-10T09:01"
+  },
+  {
+   "id": "t_97a001cab5",
+   "v": {
+    "name": "Cama prestamo",
+    "date": "2026-06-30",
+    "status": "Completada",
+    "desc": "SE LA LLEVARON",
+    "tags": [
+     "1-1"
+    ]
+   },
+   "createdAt": "2026-06-10T11:28",
+   "updatedAt": "2026-06-26T09:34"
+  },
+  {
+   "id": "t_8bb68e60d8",
+   "v": {
+    "name": "Dibujos Manuel ",
+    "date": "2026-06-12",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-10T17:30",
+   "updatedAt": "2026-06-15T11:23"
+  },
+  {
+   "id": "t_ee2300fcde",
+   "v": {
+    "name": "Incubadoras bodega",
+    "date": "2026-07-06",
+    "status": "Algún día",
+    "desc": "viendo bodegas, me enviaran  cotis",
+    "tags": [
+     "1-1",
+     "BODEGA-4"
+    ]
+   },
+   "createdAt": "2026-06-12T12:46",
+   "updatedAt": "2026-07-01T12:53"
+  },
+  {
+   "id": "t_201c250170",
+   "v": {
+    "name": "Abastecimiento mandar correo",
+    "date": "2026-06-16",
+    "status": "Completada",
+    "desc": "deben armar pedido"
+   },
+   "createdAt": "2026-06-12T13:36",
+   "updatedAt": "2026-06-16T15:05"
+  },
+  {
+   "id": "t_d4906a9a55",
+   "v": {
+    "name": "Clima Planilla en reu",
+    "date": "2026-06-19",
+    "status": "Completada",
+    "desc": "poner las cuotas pendientes en planilla"
+   },
+   "createdAt": "2026-06-12T14:05",
+   "updatedAt": "2026-06-18T13:05"
+  },
+  {
+   "id": "t_bdc902df94",
+   "v": {
+    "name": "Camillas-Hablar a mediplex",
+    "date": "2026-06-29",
+    "status": "Acción",
+    "desc": "coti ok preguntar que hacer"
+   },
+   "createdAt": "2026-06-12T14:25",
+   "updatedAt": "2026-06-23T19:44"
+  },
+  {
+   "id": "t_8d793fe7d6",
+   "v": {
+    "name": "MEDCAPTAIN, backup/retiro st",
+    "date": "2026-06-26",
+    "status": "A la espera",
+    "desc": "espero respuesta med",
+    "tags": [
+     "CORREO"
+    ]
+   },
+   "createdAt": "2026-06-12T14:32",
+   "updatedAt": "2026-07-01T13:09"
+  },
+  {
+   "id": "t_8b48bdc898",
+   "v": {
+    "name": "Poner termonetro en planilla",
+    "date": "2026-06-12",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-12T14:59",
+   "updatedAt": "2026-06-15T11:25"
+  },
+  {
+   "id": "t_6dd1c8ffa4",
+   "v": {
+    "name": "Pedir el día 11/6",
+    "date": "2026-06-12",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-12T15:06",
+   "updatedAt": "2026-06-15T08:35"
+  },
+  {
+   "id": "t_473d9e4da9",
+   "v": {
+    "name": "etiqueta de los dea",
+    "date": "2026-06-12",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-12T16:14",
+   "updatedAt": "2026-06-15T11:23"
+  },
+  {
+   "id": "t_8d96d0f1f9",
+   "v": {
+    "name": "Crear tareas mensuales",
+    "date": "2026-06-26",
+    "status": "Inbox"
+   },
+   "createdAt": "2026-06-12T17:30",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_0257970ee6",
+   "v": {
+    "name": "reembolso tropo",
+    "date": "2026-06-22",
+    "status": "Completada",
+    "desc": "falta solo deposito"
+   },
+   "createdAt": "2026-06-15T12:46",
+   "updatedAt": "2026-06-23T13:22"
+  },
+  {
+   "id": "t_5fdec9c0bf",
+   "v": {
+    "name": "Petitorio reparación corimed",
+    "date": "2026-07-07",
+    "status": "A la espera",
+    "tags": [
+     "1-1"
+    ]
+   },
+   "createdAt": "2026-06-16T10:55",
+   "updatedAt": "2026-06-26T10:24"
+  },
+  {
+   "id": "t_90765d54e0",
+   "v": {
+    "name": "RX dosimetros",
+    "date": "2026-06-17",
+    "status": "Completada",
+    "desc": "enviado correo a prevencion"
+   },
+   "createdAt": "2026-06-16T16:11",
+   "updatedAt": "2026-06-17T11:55"
+  },
+  {
+   "id": "t_190282ea94",
+   "v": {
+    "name": "EPP ihh",
+    "date": "2026-07-06",
+    "status": "A la espera",
+    "desc": "correo solicitado"
+   },
+   "createdAt": "2026-06-16T16:17",
+   "updatedAt": "2026-06-25T11:56"
+  },
+  {
+   "id": "t_6e1e4ffff1",
+   "v": {
+    "name": "Mochila",
+    "date": "2026-06-19",
+    "status": "Completada",
+    "desc": "espero que llegue"
+   },
+   "createdAt": "2026-06-16T21:21",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_086f404536",
+   "v": {
+    "name": "fotos manu",
+    "date": "2026-06-17",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-17T09:00",
+   "updatedAt": "2026-06-17T11:19"
+  },
+  {
+   "id": "t_4cfb2c650b",
+   "v": {
+    "name": "Parca para eqm",
+    "date": "2026-07-07",
+    "status": "A la espera",
+    "tags": [
+     "1-1"
+    ]
+   },
+   "createdAt": "2026-06-18T09:33",
+   "updatedAt": "2026-06-26T10:24"
+  },
+  {
+   "id": "t_a9dd85e5ef",
+   "v": {
+    "name": "Archivador manu",
+    "date": "2026-06-19",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-18T22:05",
+   "updatedAt": "2026-06-19T09:35"
+  },
+  {
+   "id": "t_c07cea8c1e",
+   "v": {
+    "name": "Cartel pabellón “malo”",
+    "status": "Completada"
+   },
+   "createdAt": "2026-06-19T13:35",
+   "updatedAt": "2026-06-23T19:44"
+  },
+  {
+   "id": "t_7eb8e0cfc7",
+   "v": {
+    "name": "Porta sueros mq",
+    "status": "A la espera",
+    "desc": "Hablar con bbraun",
+    "tags": [
+     "BODEGA-2"
+    ]
+   },
+   "createdAt": "2026-06-19T13:44",
+   "updatedAt": "2026-06-24T08:22"
+  },
+  {
+   "id": "t_b704fdc419",
+   "v": {
+    "name": "REVISAR MEDICINA",
+    "status": "Archivo de seguimiento"
+   },
+   "createdAt": "2026-06-19T15:45",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_afd18e28b3",
+   "v": {
+    "name": "CORTE DE PELO",
+    "date": "2026-06-29",
+    "status": "Acción"
+   },
+   "createdAt": "2026-06-19T15:45",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_b706c61a47",
+   "v": {
+    "name": "CONTROL DE GASTOS SEMANAL",
+    "status": "Archivo de seguimiento"
+   },
+   "createdAt": "2026-06-19T15:45",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_369012d336",
+   "v": {
+    "name": "ORGANIZACION CASA PROFUNDA",
+    "date": "2026-06-23",
+    "status": "Inbox"
+   },
+   "createdAt": "2026-06-19T15:46",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_8f9303eb6a",
+   "v": {
+    "name": "REVISAR VEHICULO",
+    "status": "Inbox"
+   },
+   "createdAt": "2026-06-19T15:46",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_47ed8f6893",
+   "v": {
+    "name": "Nomad",
+    "date": "2026-06-19",
+    "status": "Inbox"
+   },
+   "createdAt": "2026-06-19T22:22",
+   "updatedAt": "2026-06-29T17:03"
+  },
+  {
+   "id": "t_aeffb1265c",
+   "v": {
+    "name": "L200 cambio aceite",
+    "date": "2026-07-01",
+    "status": "Archivo de seguimiento",
+    "desc": "123.458",
+    "area": "Vehiculo"
+   },
+   "createdAt": "2026-06-20T10:29",
+   "updatedAt": "2026-06-26T23:02"
+  },
+  {
+   "id": "t_529066dc65",
+   "v": {
+    "name": "CAMARA PABELLON",
+    "date": "2026-06-29",
+    "status": "A la espera",
+    "desc": "storz debe responder"
+   },
+   "createdAt": "2026-06-23T11:56",
+   "updatedAt": "2026-06-23T19:43"
+  },
+  {
+   "id": "t_f78ba0adb7",
+   "v": {
+    "name": "FIN DE MES",
+    "status": "Archivo de seguimiento"
+   },
+   "createdAt": "2026-06-23T13:18",
+   "updatedAt": "2026-06-28T08:39"
+  },
+  {
+   "id": "t_238ed1b63d",
+   "v": {
+    "name": "Tiempo pastillas",
+    "status": "Completada",
+    "desc": "NOTA CREADA",
+    "notes": "Pastillas de almuerzo (https://app.notion.com/p/Pastillas-de-almuerzo-38bffb90afbd80f09107d8f1c88fdfe7?pvs=21)"
+   },
+   "createdAt": "2026-06-24T13:10",
+   "updatedAt": "2026-06-26T10:19"
+  },
+  {
+   "id": "t_6a81625186",
+   "v": {
+    "name": "Cobro arriendo andes",
+    "date": "2026-07-10",
+    "status": "Archivo de seguimiento"
+   },
+   "createdAt": "2026-06-25T10:50",
+   "updatedAt": "2026-06-26T10:24"
+  },
+  {
+   "id": "t_e8a4b214ee",
+   "v": {
+    "name": "DEA protocolos",
+    "date": "2026-10-01",
+    "status": "Archivo de seguimiento"
+   },
+   "createdAt": "2026-06-25T11:58",
+   "updatedAt": "2026-06-26T09:43"
+  },
+  {
+   "id": "t_f83302e169",
+   "v": {
+    "name": "PREUNTAR POR CARGADORES BBRAUN",
+    "status": "A la espera",
+    "tags": [
+     "1-1"
+    ]
+   },
+   "createdAt": "2026-06-26T11:36",
+   "updatedAt": "2026-06-26T11:36"
+  },
+  {
+   "id": "t_74c3697ccc",
+   "v": {
+    "name": "Mejorar el mundo de aprendizaje ",
+    "status": "Inbox"
+   },
+   "createdAt": "2026-06-27T09:36",
+   "updatedAt": "2026-06-27T09:37"
+  },
+  {
+   "id": "t_680855f6cd",
+   "v": {
+    "name": "Crema, stock?",
+    "status": "Inbox"
+   },
+   "createdAt": "2026-06-28T08:46",
+   "updatedAt": "2026-06-28T08:47"
+  },
+  {
+   "id": "t_6ce803213c",
+   "v": {
+    "name": "Mesita para Manuel",
+    "status": "Inbox"
+   },
+   "createdAt": "2026-06-28T14:39",
+   "updatedAt": "2026-06-28T14:39"
+  },
+  {
+   "id": "t_0b8ae82764",
+   "v": {
+    "name": "Manuel-imprimir blanco y negro",
+    "status": "Inbox"
+   },
+   "createdAt": "2026-06-28T18:47",
+   "updatedAt": "2026-06-28T18:47"
+  },
+  {
+   "id": "t_aadb44d8ef",
+   "v": {
+    "name": "Cad averiguar dónde están",
+    "status": "Inbox"
+   },
+   "createdAt": "2026-06-30T10:06",
+   "updatedAt": "2026-06-30T10:07"
+  },
+  {
+   "id": "t_41e3e4b113",
+   "v": {
+    "name": "TINTA",
+    "date": "2026-06-30",
+    "status": "A la espera",
+    "desc": "espero respuesta"
+   },
+   "createdAt": "2026-06-30T10:34",
+   "updatedAt": "2026-07-01T12:52"
+  },
+  {
+   "id": "t_7afc1d52fc",
+   "v": {
+    "name": "AIRVO, retiro",
+    "date": "2026-07-01",
+    "status": "A la espera",
+    "desc": "espero respuesta"
+   },
+   "createdAt": "2026-07-01T12:40",
+   "updatedAt": "2026-07-01T12:51"
+  },
+  {
+   "id": "t_ebc558e338",
+   "v": {
+    "name": "Clibrar laser",
+    "date": "2026-07-01",
+    "status": "Inbox"
+   },
+   "createdAt": "2026-07-01T16:06",
+   "updatedAt": "2026-07-01T16:06"
+  }
+ ]
+}
