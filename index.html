@@ -248,6 +248,12 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
 #toast.show{display:block}
 /* ---------- Notas ---------- */
 #btnNotes{flex:none;font-size:12.5px;padding:5px 9px}
+.cell.noteref{flex-wrap:wrap;gap:5px}
+.nchip{display:inline-flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--line2);
+  border-radius:99px;padding:2px 4px 2px 9px;font-size:12px;max-width:100%}
+.nchip .nctx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.nlink{color:var(--tx2)}
+.nlink:hover{color:var(--acc)}
 .notes-modal{width:940px;height:84vh;max-height:84vh}
 .notes-wrap{flex:1;display:flex;min-height:0}
 .notes-list{width:255px;flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
@@ -401,6 +407,7 @@ const TYPES={
   select:{n:'Selección única',ic:'◉'}, multi:{n:'Selección múltiple',ic:'≔'},
   url:{n:'URL',ic:'🔗'}, email:{n:'Correo',ic:'@'}, phone:{n:'Teléfono',ic:'📞'},
   person:{n:'Persona',ic:'👤'}, formula:{n:'Fórmula',ic:'Σ'},
+  noteref:{n:'Notas',ic:'🗒'},
   created:{n:'Fecha de creación',ic:'🕓'}, edited:{n:'Última edición',ic:'🕓'},
 };
 
@@ -427,7 +434,7 @@ function defaultDoc(){
    P('project','Proyecto','select',{options:[],hidden:true}),
    P('who','Delegada a','person',{hidden:true}),
    P('url','URL','url',{hidden:true}),
-   P('notes','Notas','text',{hidden:true}),
+   P('notes','Notas','noteref',{hidden:true}),
    P('created','Creado','created',{hidden:true}),
    P('edited','Editado','edited',{hidden:true}),
   ],
@@ -753,6 +760,14 @@ function cellHTML(t,p,ctx){
   case'email':return`<div class="cell" data-cell>${v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:''}</div>`;
   case'phone':return`<div class="cell" data-cell>${v?`<a href="tel:${esc(v)}">${esc(v)}</a>`:''}</div>`;
   case'person':return`<div class="cell" data-cell>${v?'👤 '+esc(v):''}</div>`;
+  case'noteref':{
+   /* Filtramos aquí las notas que ya no existen. No las borramos del dato: una
+      referencia "rota" puede ser sólo una nota que aún no ha llegado de otro
+      dispositivo, y borrarla perdería el vínculo para siempre. */
+   const live=(Array.isArray(v)?v:[]).map(id=>note(id)).filter(Boolean);
+   return`<div class="cell noteref${ctx==='drawer'?' multi':''}" data-cell>${
+    live.map(n=>`<span class="nchip" data-nchip="${n.id}">🗒 <span class="nctx">${esc(n.title)||'Sin título'}</span><button class="openb" data-nopen="${n.id}" title="Abrir nota">ABRIR</button></span>`).join('')
+    ||'<span style="color:var(--tx3)">Vincular o crear nota…</span>'}</div>`;}
   case'created':case'edited':return`<div class="cell" style="color:var(--tx2)">${esc(fmtDT(v))}</div>`;
   case'formula':return`<div class="cell" style="color:var(--tx2)">${esc(v)}</div>`;
   default:return`<div class="cell${ctx==='drawer'&&p.type==='text'?' multi':''}" data-cell>${esc(v??'')}</div>`;
@@ -766,6 +781,7 @@ function editCell(el,t,p){
  if(p.type==='status'||p.type==='select')return optionMenu(el,t,p,false);
  if(p.type==='multi')return optionMenu(el,t,p,true);
  if(p.type==='date')return dateMenu(el,t,p);
+ if(p.type==='noteref')return noteMenu(el,t,p);
  // texto / número / url / email / phone / person / title
  const old=t.v[p.id]??'';
  const multi=p.type==='text';   // descripciones y notas: multilínea
@@ -848,6 +864,51 @@ function dateMenu(anchor,t,p){
  });
 }
 
+/* ---------- Selector de notas de una tarea ---------- */
+function noteMenu(anchor,t,p){
+ const cur=Array.isArray(t.v[p.id])?t.v[p.id]:[];
+ const draw=()=>{
+  const q=($('#nmQ')?$('#nmQ').value:'').trim().toLowerCase();
+  const list=liveNotes()
+   .filter(n=>!q||(n.title||'').toLowerCase().includes(q)||noteText(n).toLowerCase().includes(q))
+   .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+  return list.map(n=>{
+   const on=(t.v[p.id]||[]).includes(n.id);
+   return`<div class="mi listrow" style="cursor:default">
+     <button class="nlink" data-nlink="${n.id}" title="${on?'Desvincular':'Vincular'}"><span class="mic">${on?'✓':'＋'}</span></button>
+     <span class="nm" data-nlink2="${n.id}" style="cursor:pointer">${esc(n.title)||'Sin título'}</span>
+     <button class="openb" data-nopen2="${n.id}">ABRIR</button></div>`;}).join('')
+   ||'<div class="mi" style="color:var(--tx3);cursor:default">Sin notas</div>';
+ };
+ openPop(`<input class="minput" id="nmQ" placeholder="Buscar o crear nota…">
+   <div id="nmList">${draw()}</div>
+   <div class="msep"></div>
+   <button class="mi" id="nmNew"><span class="mic">＋</span>Crear nota nueva</button>`,anchor,pp=>{
+  const wire=()=>{
+   pp.querySelectorAll('[data-nlink],[data-nlink2]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.nlink||b.dataset.nlink2;
+    const arr=[...(t.v[p.id]||[])],i=arr.indexOf(id);
+    i>=0?arr.splice(i,1):arr.push(id);
+    setVal(t,p.id,arr);
+    pp.querySelector('#nmList').innerHTML=draw();wire();});
+   pp.querySelectorAll('[data-nopen2]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.nopen2;closePop();openNotes(id);});
+  };
+  wire();
+  const q=pp.querySelector('#nmQ');q.focus();
+  q.oninput=()=>{pp.querySelector('#nmList').innerHTML=draw();wire();};
+  const create=()=>{
+   const title=q.value.trim();
+   const n=newNote(title?{title}:{});
+   setVal(t,p.id,[...(t.v[p.id]||[]),n.id]);
+   closePop();openNotes(n.id);
+   setTimeout(()=>{const ti=$('#nTitle');if(ti&&!title)ti.focus();},60);
+  };
+  pp.querySelector('#nmNew').onclick=create;
+  q.onkeydown=e=>{if(e.key==='Enter'&&q.value.trim())create();};
+ });
+}
+
 /* ---------- TABLA ---------- */
 function renderTable(main,v){
  const list=viewTasks(v);
@@ -895,6 +956,8 @@ function renderTable(main,v){
    const t=task(td.dataset.t),p=prop(td.dataset.p);if(!t||!p)return;
    if(e.target.closest('[data-open]')){openDrawer(t.id);return;}
    if(e.target.closest('[data-done]')){toggleDone(t);return;}
+   const nop=e.target.closest('[data-nopen]');
+   if(nop){openNotes(nop.dataset.nopen);return;}
    if(e.target.tagName==='A')return;
    const c=td.querySelector('[data-cell]');if(c)editCell(c,t,p);
   };});
@@ -1476,7 +1539,11 @@ function renderDrawer(){
   row.innerHTML=`<div class="dlab" title="${esc(p.name)}"><span>${TYPES[p.type].ic}</span>${esc(p.name)}</div><div class="dval">${cellHTML(t,p,'drawer')}</div>`;
   row.querySelector('.dlab').onclick=e=>{e.stopPropagation();propEditor(p);};
   const c=row.querySelector('[data-cell]');
-  if(c)c.onclick=e=>{if(e.target.tagName==='A')return;editCell(c,t,p);};
+  if(c)c.onclick=e=>{
+   if(e.target.tagName==='A')return;
+   const op=e.target.closest('[data-nopen]');
+   if(op){e.stopPropagation();openNotes(op.dataset.nopen);return;}
+   editCell(c,t,p);};
   box.appendChild(row);
  });
  renderBlocks($('#dBlocks'),t);
@@ -1712,6 +1779,7 @@ function download(name,content,mime){
 function exportRows(){
  const ps=D.props;
  return[ps.map(p=>p.name),...liveTasks().map(t=>ps.map(p=>{const v=propValue(t,p);
+  if(p.type==='noteref')return (Array.isArray(v)?v:[]).map(id=>{const n=note(id);return n?(n.title||'Sin título'):'';}).filter(Boolean).join(', ');
   return Array.isArray(v)?v.join(', '):(v??'');}))];
 }
 function doExport(kind){
@@ -2157,7 +2225,11 @@ $('#searchMode').onclick=()=>{searchGlobal=!searchGlobal;updSearchModeBtn();
 updSearchModeBtn();
 $$('.overlay').forEach(o=>{o.onclick=e=>{if(e.target===o||e.target.closest('[data-close]'))o.classList.remove('show');};});
 document.addEventListener('keydown',e=>{
- if(e.key==='Escape'){closePop();closeDrawer();notesOpen=false;$$('.overlay').forEach(o=>o.classList.remove('show'));}
+ if(e.key==='Escape'){
+  /* cierra sólo la capa de encima */
+  if(pop.classList.contains('show')){closePop();return;}
+  if(notesOpen){closeNotes();return;}
+  closeDrawer();$$('.overlay').forEach(o=>o.classList.remove('show'));}
  if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();$('#search').focus();}
  if(e.key==='n'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$('#btnNew').click();}
 });
@@ -2166,16 +2238,40 @@ document.addEventListener('keydown',e=>{
 /* Migraciones: idempotentes (se pueden ejecutar dos veces sin efecto) y
    nunca destructivas — jamás borran campos que no conozcan, porque otro
    dispositivo con una versión más nueva puede haberlos sincronizado. */
+/* Convierte las Notas de texto que ya existían en notas de verdad.
+   Claves del diseño:
+   · el id se deriva del id de la tarea → dos dispositivos generan el MISMO id
+     y al sincronizar se fusionan en vez de duplicarse;
+   · no se toca t.updatedAt → la migración no pelea con las ediciones de otro
+     dispositivo ni dispara una resincronización masiva;
+   · se ejecuta en cada arranque sobre cualquier valor que siga siendo texto,
+     así se auto-repara si un móvil con la versión antigua devuelve el texto. */
+function migrateNoteRefs(){
+ const p=D.props.find(x=>x.id==='notes');
+ if(!p)return;
+ D.tasks.forEach(t=>{
+  const txt=t.v&&t.v.notes;
+  if(typeof txt!=='string'||!txt.trim())return;
+  const nid='n_of_'+t.id;
+  if(!D.notes.some(n=>n.id===nid))
+   D.notes.push({id:nid,title:(t.v.name||'Nota').slice(0,60),
+    blocks:[{id:'b_of_'+t.id,type:'md',title:'',text:txt,updatedAt:t.updatedAt||nowISO()}],
+    createdAt:t.createdAt||nowISO(),updatedAt:t.updatedAt||nowISO()});
+  t.v.notes=[nid];
+ });
+ if(p.type==='text'){p.type='noteref';p.updatedAt=nowISO();}
+}
 function migrate(){
  const s=D.settings;
  if(!Array.isArray(s.defaultVisibleProps))s.defaultVisibleProps=['date','status','desc'];
  if(s.calDurationMin==null)s.calDurationMin=60;
  if(!Array.isArray(D.notes))D.notes=[];
+ migrateNoteRefs();
  /* Nota: las propiedades que ya tienen datos en una tarea siguen visibles en
     esa tarea por la regla hasValue(), así que no hace falta tocar drawerShow
     de los usuarios existentes: nada desaparece y las tareas nuevas quedan
     limpias, que es justo lo pedido. */
- D.version=Math.max(D.version||1,2);
+ D.version=Math.max(D.version||1,3);
 }
 async function boot(){
  await idb.open();
