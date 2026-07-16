@@ -89,6 +89,11 @@ table.grid{border-collapse:collapse;min-width:100%;font-size:13.5px}
 .cell:hover{background:var(--bg2)}
 .cell.editing{padding:0}
 .cell input,.cell select{width:100%;height:34px;border-radius:0;border:2px solid var(--acc);background:var(--bg2)}
+/* Celdas multilínea (descripciones/notas en el panel de detalle) */
+.cell.multi{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;text-overflow:clip;align-items:flex-start;height:auto}
+.cell textarea{width:100%;min-height:34px;border-radius:0;border:2px solid var(--acc);background:var(--bg2);
+  padding:6px 9px;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;
+  line-height:1.45;display:block;font:inherit;color:inherit}
 td.selcol,th.selcol{width:34px;text-align:center;border-right:none}
 td.selcol input,th.selcol input{cursor:pointer}
 tr.trow:hover td{background:var(--bg2)}
@@ -601,7 +606,9 @@ function renderMain(){
 }
 
 /* ---------- celda (lectura) ---------- */
-function cellHTML(t,p){
+/* ctx==='drawer' → las celdas de texto envuelven en varias líneas;
+   en la tabla se mantienen en una sola línea con elipsis. */
+function cellHTML(t,p,ctx){
  const v=propValue(t,p);
  switch(p.type){
   case'title':{
@@ -623,7 +630,7 @@ function cellHTML(t,p){
   case'person':return`<div class="cell" data-cell>${v?'👤 '+esc(v):''}</div>`;
   case'created':case'edited':return`<div class="cell" style="color:var(--tx2)">${esc(fmtDT(v))}</div>`;
   case'formula':return`<div class="cell" style="color:var(--tx2)">${esc(v)}</div>`;
-  default:return`<div class="cell" data-cell>${esc(v??'')}</div>`;
+  default:return`<div class="cell${ctx==='drawer'&&p.type==='text'?' multi':''}" data-cell>${esc(v??'')}</div>`;
  }
 }
 
@@ -636,15 +643,31 @@ function editCell(el,t,p){
  if(p.type==='date')return dateMenu(el,t,p);
  // texto / número / url / email / phone / person / title
  const old=t.v[p.id]??'';
+ const multi=p.type==='text';   // descripciones y notas: multilínea
  el.classList.add('editing');
- el.innerHTML=`<input type="${p.type==='number'?'number':'text'}" value="${esc(old)}">`;
- const inp=el.querySelector('input');inp.focus();inp.select();
+ el.innerHTML=multi?`<textarea rows="1">${esc(old)}</textarea>`
+                   :`<input type="${p.type==='number'?'number':'text'}" value="${esc(old)}">`;
+ const inp=el.querySelector(multi?'textarea':'input');
+ /* Cursor AL FINAL en vez de seleccionar todo el texto (al teclear en el móvil,
+    la selección completa borraba lo que ya había). setSelectionRange lanza
+    InvalidStateError en type="number", de ahí el try/catch. */
+ inp.focus();
+ try{const L=inp.value.length;inp.setSelectionRange(L,L);}catch(_){}
+ /* La caja crece una línea a la vez y nunca hace scroll interno ni lateral */
+ const grow=()=>{inp.style.height='auto';inp.style.height=(inp.scrollHeight||34)+'px';};
+ if(multi){grow();inp.oninput=grow;}
  let done=false;
  const commit=ok=>{if(done)return;done=true;
   if(ok&&inp.value!==String(old))setVal(t,p.id,p.type==='number'?(inp.value===''?'':+inp.value):inp.value);
   else render();};
  inp.onblur=()=>commit(true);
- inp.onkeydown=e=>{if(e.key==='Enter')commit(true);if(e.key==='Escape')commit(false);};
+ inp.onkeydown=e=>{
+  if(e.key==='Escape'){commit(false);return;}
+  if(e.key==='Enter'){
+   if(!multi){commit(true);return;}                        // una línea: Enter guarda
+   if(e.ctrlKey||e.metaKey){e.preventDefault();commit(true);} // multilínea: Ctrl/Cmd+Enter guarda
+   /* Enter a secas: salto de línea */
+  }};
 }
 function optionMenu(anchor,t,p,multi){
  const selv=multi?(t.v[p.id]||[]):t.v[p.id];
@@ -968,7 +991,7 @@ function renderDrawer(){
  const box=$('#dProps');box.innerHTML='';
  D.props.filter(p=>p.type!=='title').forEach(p=>{
   const row=document.createElement('div');row.className='dprop';
-  row.innerHTML=`<div class="dlab" title="${esc(p.name)}"><span>${TYPES[p.type].ic}</span>${esc(p.name)}</div><div class="dval">${cellHTML(t,p)}</div>`;
+  row.innerHTML=`<div class="dlab" title="${esc(p.name)}"><span>${TYPES[p.type].ic}</span>${esc(p.name)}</div><div class="dval">${cellHTML(t,p,'drawer')}</div>`;
   row.querySelector('.dlab').onclick=e=>{e.stopPropagation();propEditor(p);};
   const c=row.querySelector('[data-cell]');
   if(c)c.onclick=e=>{if(e.target.tagName==='A')return;editCell(c,t,p);};
