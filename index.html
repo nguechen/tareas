@@ -160,6 +160,33 @@ tr:hover .openb,.openb:hover,.openb:focus{opacity:1;color:var(--tx);border-color
 .dval .cell:hover{background:var(--bg3)}
 #dAddProp{color:var(--tx3);padding:8px 0;font-size:13px}
 #dAddProp:hover{color:var(--tx)}
+/* ---------- Bloques / elementos (tabla, base de datos, to-do) ---------- */
+#dAddBlock{color:var(--tx3);padding:8px 0;font-size:13px;display:block}
+#dAddBlock:hover{color:var(--tx)}
+#dBlocks{margin-top:6px}
+.blk{border:1px solid var(--line);border-radius:8px;margin:12px 0;background:var(--bg2)}
+.blk-top{display:flex;align-items:center;gap:7px;padding:6px 8px;border-bottom:1px solid var(--line)}
+.blk-top .blk-title{flex:1;min-width:0;background:none;border:1px solid transparent;font-weight:600;font-size:13px;padding:3px 5px}
+.blk-top .blk-title:hover{border-color:var(--line2)}
+.blk-body{padding:6px 8px;overflow-x:auto}
+table.btable{border-collapse:collapse;width:100%;font-size:13px}
+.btable th,.btable td{border:1px solid var(--line);padding:0;vertical-align:middle}
+.btable th{background:var(--bg3)}
+.btable input[type=text],.btable input[type=number],.btable input[type=date]{width:100%;min-width:90px;border:none;background:none;border-radius:0;padding:5px 7px}
+.btable input:focus{outline:2px solid var(--acc);outline-offset:-2px}
+.btable th input{font-weight:600;color:var(--tx2)}
+.btable .xcol,.btable .xrow{width:26px;text-align:center;color:var(--tx3);background:none;border:none}
+.btable .xcol:hover,.btable .xrow:hover{color:var(--err)}
+.btable select{border:none;background:none;border-radius:0;padding:4px;font-size:12px;color:var(--tx3);width:100%}
+.blk-add{color:var(--tx3);font-size:12.5px;padding:5px 4px}
+.blk-add:hover{color:var(--tx)}
+.todo-it{display:flex;align-items:center;gap:8px;padding:3px 2px}
+.todo-it input[type=checkbox]{width:15px;height:15px;flex:none;cursor:pointer}
+.todo-it .todo-txt{flex:1;min-width:0;background:none;border:1px solid transparent;padding:4px 6px}
+.todo-it .todo-txt:hover{border-color:var(--line2)}
+.todo-it.done .todo-txt{color:var(--tx3);text-decoration:line-through}
+.todo-it .xrow{color:var(--tx3);background:none;border:none;padding:0 4px}
+.todo-it .xrow:hover{color:var(--err)}
 
 /* ---------- Popover / menus ---------- */
 #pop{position:fixed;z-index:100;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;box-shadow:var(--shadow);min-width:220px;max-width:330px;max-height:60vh;overflow-y:auto;display:none;padding:5px}
@@ -252,6 +279,8 @@ tr:hover .openb,.openb:hover,.openb:focus{opacity:1;color:var(--tx);border-color
     <input id="dTitle" placeholder="Sin título">
     <div id="dProps"></div>
     <button id="dAddProp">Añadir/mostrar propiedad</button>
+    <button id="dAddBlock">Añadir elemento</button>
+    <div id="dBlocks"></div>
   </div>
 </aside>
 
@@ -1038,6 +1067,156 @@ function renderBoard(main,v){
   const t=newTask(val?{[gp.id]:gp.type==='multi'?[val]:val}:{});save();openDrawer(t.id);});
 }
 
+/* ============================ BLOQUES / ELEMENTOS ============================
+   Motor compartido. No sabe qué es su dueño: le basta un objeto con .blocks y
+   un updatedAt (tareas ahora; notas en la fase 7). Los bloques viven DENTRO de
+   su dueño, así que viajan con él en la sincronización sin trabajo extra. */
+const BLOCK_TYPES={table:{n:'Tabla',ic:'▦'},db:{n:'Base de datos',ic:'🗄'},todo:{n:'To-do list',ic:'☑'}};
+const DB_TYPES={text:'Texto',number:'Número',select:'Selección',checkbox:'Casilla',date:'Fecha'};
+
+const blocksOf=o=>(o.blocks=o.blocks||[]);
+function newBlock(type){
+ const b={id:uid('b'),type,title:'',updatedAt:nowISO()};
+ if(type==='table')Object.assign(b,{cols:[{id:uid('c'),name:'Columna 1'},{id:uid('c'),name:'Columna 2'}],rows:[]});
+ if(type==='db')Object.assign(b,{props:[{id:uid('dp'),name:'Nombre',type:'text'},{id:uid('dp'),name:'Estado',type:'select',options:[]}],rows:[]});
+ if(type==='todo')Object.assign(b,{items:[]});
+ return b;
+}
+/* Cambio estructural (añadir/borrar fila, columna, bloque…) → repinta.
+   Cambio de contenido de una celda → guarda SIN repintar, para no arrancarle
+   el foco al usuario mientras escribe. */
+function blkChanged(owner,b,redraw){
+ if(b)b.updatedAt=nowISO();
+ owner.updatedAt=nowISO();
+ save(redraw?undefined:{noRender:true});
+}
+function blockMenu(anchor,owner){
+ openPop(`<div class="mhead">Añadir elemento</div>
+  ${Object.entries(BLOCK_TYPES).map(([k,v])=>
+   `<button class="mi" data-blk="${k}"><span class="mic">${v.ic}</span>${v.n}</button>`).join('')}`,
+  anchor,pp=>pp.querySelectorAll('[data-blk]').forEach(b=>b.onclick=()=>{
+   blocksOf(owner).push(newBlock(b.dataset.blk));
+   blkChanged(owner,null,true);closePop();}));
+}
+function renderBlocks(box,owner){
+ box.innerHTML='';
+ blocksOf(owner).forEach(b=>{
+  const el=document.createElement('div');el.className='blk';el.dataset.b=b.id;
+  el.innerHTML=`<div class="blk-top"><span>${BLOCK_TYPES[b.type]?BLOCK_TYPES[b.type].ic:'▦'}</span>
+    <input class="blk-title" data-blktitle value="${esc(b.title||'')}" placeholder="${BLOCK_TYPES[b.type]?BLOCK_TYPES[b.type].n:'Elemento'}">
+    <button class="iconbtn" data-blkdel title="Eliminar elemento">✕</button></div>
+   <div class="blk-body"></div>`;
+  el.querySelector('[data-blktitle]').onchange=e=>{b.title=e.target.value;blkChanged(owner,b,false);};
+  el.querySelector('[data-blkdel]').onclick=()=>{
+   if(!confirm('¿Eliminar este elemento?'))return;
+   owner.blocks=blocksOf(owner).filter(x=>x.id!==b.id);blkChanged(owner,null,true);};
+  const body=el.querySelector('.blk-body');
+  if(b.type==='table')renderTableBlock(body,b,owner);
+  else if(b.type==='db')renderDbBlock(body,b,owner);
+  else if(b.type==='todo')renderTodoBlock(body,b,owner);
+  box.appendChild(el);
+ });
+}
+/* ---------- Tabla: rejilla simple de texto ---------- */
+function renderTableBlock(box,b,owner){
+ box.innerHTML=`<table class="btable"><thead><tr>
+   ${b.cols.map(c=>`<th><div style="display:flex;align-items:center">
+     <input type="text" data-colname="${c.id}" value="${esc(c.name)}">
+     <button class="xcol" data-delcol="${c.id}" title="Eliminar columna">✕</button></div></th>`).join('')}
+   <th class="xcol"><button class="blk-add" data-addcol title="Añadir columna">＋</button></th></tr></thead>
+  <tbody>${b.rows.map(r=>`<tr>
+    ${b.cols.map(c=>`<td><input type="text" data-r="${r.id}" data-c="${c.id}" value="${esc(r.cells[c.id]||'')}"></td>`).join('')}
+    <td class="xrow"><button class="xrow" data-delrow="${r.id}" title="Eliminar fila">✕</button></td></tr>`).join('')}
+  </tbody></table>
+  <button class="blk-add" data-addrow>＋ Nueva fila</button>`;
+ box.querySelector('[data-addcol]').onclick=()=>{
+  b.cols.push({id:uid('c'),name:'Columna '+(b.cols.length+1)});blkChanged(owner,b,true);};
+ box.querySelector('[data-addrow]').onclick=()=>{
+  b.rows.push({id:uid('r'),cells:{}});blkChanged(owner,b,true);};
+ box.querySelectorAll('[data-colname]').forEach(i=>i.onchange=()=>{
+  const c=b.cols.find(x=>x.id===i.dataset.colname);if(c)c.name=i.value;blkChanged(owner,b,false);});
+ box.querySelectorAll('[data-delcol]').forEach(btn=>btn.onclick=()=>{
+  b.cols=b.cols.filter(c=>c.id!==btn.dataset.delcol);
+  b.rows.forEach(r=>delete r.cells[btn.dataset.delcol]);blkChanged(owner,b,true);});
+ box.querySelectorAll('[data-delrow]').forEach(btn=>btn.onclick=()=>{
+  b.rows=b.rows.filter(r=>r.id!==btn.dataset.delrow);blkChanged(owner,b,true);});
+ box.querySelectorAll('[data-r]').forEach(i=>i.onchange=()=>{
+  const r=b.rows.find(x=>x.id===i.dataset.r);if(!r)return;
+  if(i.value==='')delete r.cells[i.dataset.c];else r.cells[i.dataset.c]=i.value;
+  blkChanged(owner,b,false);});
+}
+/* ---------- Base de datos: columnas con tipo ---------- */
+function dbCellHTML(b,r,p){
+ const v=r.v[p.id];
+ const at=`data-dbr="${r.id}" data-dbp="${p.id}"`;
+ switch(p.type){
+  case'number':return`<input type="number" ${at} value="${esc(v??'')}">`;
+  case'date':  return`<input type="date" ${at} value="${esc(dOnly(v))}">`;
+  case'checkbox':return`<input type="checkbox" ${at} ${v?'checked':''} style="margin:6px">`;
+  case'select':{
+   const dl='dl_'+p.id;
+   return`<input type="text" list="${dl}" ${at} value="${esc(v??'')}" placeholder="Escribe para crear…">
+     <datalist id="${dl}">${(p.options||[]).map(o=>`<option value="${esc(o)}"></option>`).join('')}</datalist>`;}
+  default:return`<input type="text" ${at} value="${esc(v??'')}">`;
+ }
+}
+function renderDbBlock(box,b,owner){
+ box.innerHTML=`<table class="btable"><thead><tr>
+   ${b.props.map(p=>`<th><div style="display:flex;align-items:center">
+      <input type="text" data-dbpname="${p.id}" value="${esc(p.name)}">
+      <button class="xcol" data-dbpdel="${p.id}" title="Eliminar columna">✕</button></div>
+      <select data-dbptype="${p.id}" title="Tipo de columna">
+        ${Object.entries(DB_TYPES).map(([k,n])=>`<option value="${k}" ${p.type===k?'selected':''}>${n}</option>`).join('')}
+      </select></th>`).join('')}
+   <th class="xcol"><button class="blk-add" data-dbaddprop title="Añadir columna">＋</button></th></tr></thead>
+  <tbody>${b.rows.map(r=>`<tr>
+    ${b.props.map(p=>`<td>${dbCellHTML(b,r,p)}</td>`).join('')}
+    <td class="xrow"><button class="xrow" data-dbdelrow="${r.id}" title="Eliminar fila">✕</button></td></tr>`).join('')}
+  </tbody></table>
+  <button class="blk-add" data-dbaddrow>＋ Nuevo registro</button>`;
+ box.querySelector('[data-dbaddprop]').onclick=()=>{
+  b.props.push({id:uid('dp'),name:'Columna '+(b.props.length+1),type:'text'});blkChanged(owner,b,true);};
+ box.querySelector('[data-dbaddrow]').onclick=()=>{
+  b.rows.push({id:uid('r'),v:{}});blkChanged(owner,b,true);};
+ box.querySelectorAll('[data-dbpname]').forEach(i=>i.onchange=()=>{
+  const p=b.props.find(x=>x.id===i.dataset.dbpname);if(p)p.name=i.value;blkChanged(owner,b,false);});
+ box.querySelectorAll('[data-dbptype]').forEach(s=>s.onchange=()=>{
+  const p=b.props.find(x=>x.id===s.dataset.dbptype);if(!p)return;
+  p.type=s.value;if(p.type==='select')p.options=p.options||[];blkChanged(owner,b,true);});
+ box.querySelectorAll('[data-dbpdel]').forEach(btn=>btn.onclick=()=>{
+  b.props=b.props.filter(p=>p.id!==btn.dataset.dbpdel);
+  b.rows.forEach(r=>delete r.v[btn.dataset.dbpdel]);blkChanged(owner,b,true);});
+ box.querySelectorAll('[data-dbdelrow]').forEach(btn=>btn.onclick=()=>{
+  b.rows=b.rows.filter(r=>r.id!==btn.dataset.dbdelrow);blkChanged(owner,b,true);});
+ box.querySelectorAll('[data-dbr]').forEach(i=>{
+  i.onchange=()=>{
+   const r=b.rows.find(x=>x.id===i.dataset.dbr),p=b.props.find(x=>x.id===i.dataset.dbp);
+   if(!r||!p)return;
+   let val=p.type==='checkbox'?i.checked:i.value;
+   if(p.type==='number'&&val!=='')val=+val;
+   /* en una columna de selección, escribir un valor nuevo crea la opción */
+   if(p.type==='select'&&val){p.options=p.options||[];if(!p.options.includes(val))p.options.push(val);}
+   if(val===''||val===false||val==null)delete r.v[p.id];else r.v[p.id]=val;
+   blkChanged(owner,b,p.type==='select');};});
+}
+/* ---------- To-do list ---------- */
+function renderTodoBlock(box,b,owner){
+ box.innerHTML=`${b.items.map(it=>`<div class="todo-it ${it.done?'done':''}">
+    <input type="checkbox" data-todochk="${it.id}" ${it.done?'checked':''}>
+    <input type="text" class="todo-txt" data-todotxt="${it.id}" value="${esc(it.text||'')}" placeholder="Pendiente…">
+    <button class="xrow" data-tododel="${it.id}" title="Eliminar">✕</button></div>`).join('')}
+  <button class="blk-add" data-todoadd>＋ Añadir pendiente</button>`;
+ box.querySelector('[data-todoadd]').onclick=()=>{
+  b.items.push({id:uid('i'),text:'',done:false});blkChanged(owner,b,true);};
+ box.querySelectorAll('[data-todochk]').forEach(c=>c.onclick=()=>{
+  const it=b.items.find(x=>x.id===c.dataset.todochk);if(!it)return;
+  it.done=!it.done;blkChanged(owner,b,true);});
+ box.querySelectorAll('[data-todotxt]').forEach(i=>i.onchange=()=>{
+  const it=b.items.find(x=>x.id===i.dataset.todotxt);if(it)it.text=i.value;blkChanged(owner,b,false);});
+ box.querySelectorAll('[data-tododel]').forEach(btn=>btn.onclick=()=>{
+  b.items=b.items.filter(x=>x.id!==btn.dataset.tododel);blkChanged(owner,b,true);});
+}
+
 /* ---------- DRAWER ---------- */
 function openDrawer(id){openId=id;renderDrawer();$('#drawer').classList.add('open');}
 function closeDrawer(){openId=null;$('#drawer').classList.remove('open');}
@@ -1054,6 +1233,7 @@ function renderDrawer(){
   if(c)c.onclick=e=>{if(e.target.tagName==='A')return;editCell(c,t,p);};
   box.appendChild(row);
  });
+ renderBlocks($('#dBlocks'),t);
 }
 $('#dClose').onclick=closeDrawer;
 $('#dTitle').onchange=()=>{const t=task(openId);if(t)setVal(t,'name',$('#dTitle').value);};
@@ -1061,6 +1241,7 @@ $('#dTitle').onkeydown=e=>{if(e.key==='Enter')e.target.blur();};
 $('#dDone').onclick=()=>{const t=task(openId);if(t)toggleDone(t);};
 $('#dDel').onclick=()=>{const t=task(openId);if(t&&confirm('¿Eliminar esta tarea?')){delTask(t);save();}};
 $('#dAddProp').onclick=e=>{const t=task(openId);if(t)addShowPropMenu(e.target,t);};
+$('#dAddBlock').onclick=e=>{const t=task(openId);if(t)blockMenu(e.target,t);};
 </script>
 <script>
 'use strict';
