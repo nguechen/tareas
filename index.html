@@ -251,7 +251,7 @@ tr:hover .openb,.openb:hover,.openb:focus{opacity:1;color:var(--tx);border-color
   <div class="dr-body">
     <input id="dTitle" placeholder="Sin título">
     <div id="dProps"></div>
-    <button id="dAddProp">+ Agregar propiedad</button>
+    <button id="dAddProp">Añadir/mostrar propiedad</button>
   </div>
 </aside>
 
@@ -345,7 +345,8 @@ function defaultDoc(){
    {id:'v_cal',name:'Calendario',icon:'▦',kind:'calendar',smart:null,builtin:1,filters:[],sort:{prop:'date',dir:1},group:null,cols:['name'],updatedAt:0},
    {id:'v_board',name:'Tablero',icon:'▥',kind:'board',smart:'open',builtin:1,filters:[],sort:{prop:'date',dir:1},group:'status',cols:['name','date'],updatedAt:0},
   ],
-  settings:{theme:'dark',accent:'#2383e2',clientId:'',autoSync:true,calSync:false,calId:'primary',calDurationMin:60,updatedAt:0},
+  settings:{theme:'dark',accent:'#2383e2',clientId:'',autoSync:true,calSync:false,calId:'primary',calDurationMin:60,
+    defaultVisibleProps:['date','status','desc'],updatedAt:0},
  };
 }
 
@@ -606,6 +607,30 @@ function renderMain(){
  renderTable(main,v);
 }
 
+/* ---------- visibilidad de propiedades en el panel de detalle ---------- */
+/* Ojo abierto / ojo tachado (iconos propios: los emojis de "ojo cerrado" no
+   existen de forma fiable en todas las plataformas). */
+const EYE_ON='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.1 10.1 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2m-6.7-1.1a3 3 0 1 1-4.2-4.2"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+/* ¿esta tarea tiene datos en esta propiedad? Las calculadas (creado/editado/
+   fórmula) siempre "tienen" valor, así que no cuentan: sólo se ven si el
+   usuario las activa. */
+function hasValue(t,p){
+ if(['created','edited','formula','title'].includes(p.type))return false;
+ const v=t.v[p.id];
+ return Array.isArray(v)?v.length>0:(v!==undefined&&v!==null&&v!=='');
+}
+/* Interruptor global de la propiedad (lo que refleja el ojo del menú) */
+function propOn(p){
+ if(p.drawerShow===true)return true;
+ if(p.drawerShow===false)return false;
+ return (D.settings.defaultVisibleProps||['date','status','desc']).includes(p.id);
+}
+/* Se muestra si está activada O si esta tarea ya tiene datos ahí
+   (nunca escondemos información que el usuario ya guardó). */
+function propShown(t,p){return propOn(p)||hasValue(t,p);}
+function drawerProps(t){return D.props.filter(p=>p.type!=='title'&&propShown(t,p));}
+
 /* ---------- celda (lectura) ---------- */
 /* ctx==='drawer' → las celdas de texto envuelven en varias líneas;
    en la tabla se mantienen en una sola línea con elipsis. */
@@ -844,6 +869,37 @@ function addPropMenu(anchor,v){
    D.props.push(p);v.cols.push(p.id);v.updatedAt=nowISO();save();closePop();propEditor(p);});
  });
 }
+/* Menú del panel de detalle: gestiona MOSTRAR/OCULTAR y CREAR propiedades.
+   (Distinto de addPropMenu, que gobierna las columnas de una vista.) */
+function addShowPropMenu(anchor,t){
+ const list=D.props.filter(p=>p.type!=='title');
+ openPop(`
+  <div class="mhead">Propiedades</div>
+  ${list.map(p=>{
+    const on=propOn(p),data=hasValue(t,p);
+    return`<div class="mi listrow" style="cursor:default">
+     <button class="eye ${on?'':'off'}" data-eye="${on?'on':'off'}" data-p="${p.id}"
+       title="${on?'Ocultar':'Mostrar'} «${esc(p.name)}»">${on?EYE_ON:EYE_OFF}</button>
+     <span class="mic">${TYPES[p.type].ic}</span>
+     <span class="nm">${esc(p.name)}</span>
+     ${!on&&data?'<span style="font-size:10.5px;color:var(--tx3)" title="Esta tarea ya tiene datos aquí, por eso sigue visible">con datos</span>':''}
+    </div>`;}).join('')}
+  <div class="msep"></div>
+  <div class="mhead">Nueva propiedad</div>
+  ${Object.entries(TYPES).filter(([k])=>!['title','created','edited'].includes(k)).map(([k,dd])=>
+   `<button class="mi" data-new="${k}"><span class="mic">${dd.ic}</span>${dd.n}</button>`).join('')}
+ `,anchor,pp=>{
+  pp.querySelectorAll('[data-eye]').forEach(b=>b.onclick=()=>{
+   const p=prop(b.dataset.p);p.drawerShow=!propOn(p);p.updatedAt=nowISO();save();
+   closePop();addShowPropMenu($('#dAddProp'),task(openId)||t);});
+  pp.querySelectorAll('[data-new]').forEach(b=>b.onclick=()=>{
+   const type=b.dataset.new;
+   const p={id:uid('p'),name:TYPES[type].n,type,drawerShow:true,updatedAt:nowISO()};
+   if(['select','multi','status'].includes(type))p.options=[];
+   if(type==='formula')p.formula='';
+   D.props.push(p);save();closePop();propEditor(p);});
+ });
+}
 function propEditor(p){
  const anchor=$('#btnSettings');
  const optsHTML=()=>['select','multi','status'].includes(p.type)?`
@@ -865,7 +921,7 @@ function propEditor(p){
   ${p.type==='formula'?`<div class="mhead">Fórmula</div><input class="minput" id="peF" value="${esc(p.formula||'')}" placeholder="p. ej. dias({Fecha})">`:''}
   ${optsHTML()}
   <div class="msep"></div>
-  <button class="mi" data-a="hideAll"><span class="mic">◌</span>${p.hidden?'Mostrar por defecto':'Ocultar por defecto'}</button>
+  <button class="mi" data-a="hideAll"><span class="mic">${propOn(p)?'◉':'◌'}</span>${propOn(p)?'Ocultar en las tareas':'Mostrar en las tareas'}</button>
   ${p.id==='name'?'':'<button class="mi" data-a="del" style="color:var(--err)"><span class="mic">🗑</span>Eliminar propiedad</button>'}
  `,anchor,pp=>{
   pp.querySelector('#peName').onchange=e=>{p.name=e.target.value||p.name;p.updatedAt=nowISO();save({noRender:false});};
@@ -880,7 +936,7 @@ function propEditor(p){
   pp.querySelectorAll('[data-oc]').forEach(b=>b.onclick=()=>{const o=p.options[+b.dataset.oc];
    o.color=COLORS[(COLORS.indexOf(o.color)+1)%COLORS.length];p.updatedAt=nowISO();save();closePop();propEditor(p);});
   pp.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{
-   if(b.dataset.a==='hideAll'){p.hidden=!p.hidden;p.updatedAt=nowISO();}
+   if(b.dataset.a==='hideAll'){p.drawerShow=!propOn(p);p.updatedAt=nowISO();}
    if(b.dataset.a==='del'){if(!confirm('¿Eliminar la propiedad "'+p.name+'" en todas las tareas?'))return;
     D.props=D.props.filter(x=>x.id!==p.id);
     D.views.forEach(vv=>{vv.cols=vv.cols.filter(c=>c!==p.id);if(vv.group===p.id)vv.group=null;});
@@ -990,7 +1046,7 @@ function renderDrawer(){
  $('#dTitle').value=t.v.name||'';
  $('#dDone').textContent=isDone(t)?'↩ Reabrir':'✓ Completar';
  const box=$('#dProps');box.innerHTML='';
- D.props.filter(p=>p.type!=='title').forEach(p=>{
+ drawerProps(t).forEach(p=>{
   const row=document.createElement('div');row.className='dprop';
   row.innerHTML=`<div class="dlab" title="${esc(p.name)}"><span>${TYPES[p.type].ic}</span>${esc(p.name)}</div><div class="dval">${cellHTML(t,p,'drawer')}</div>`;
   row.querySelector('.dlab').onclick=e=>{e.stopPropagation();propEditor(p);};
@@ -1004,7 +1060,7 @@ $('#dTitle').onchange=()=>{const t=task(openId);if(t)setVal(t,'name',$('#dTitle'
 $('#dTitle').onkeydown=e=>{if(e.key==='Enter')e.target.blur();};
 $('#dDone').onclick=()=>{const t=task(openId);if(t)toggleDone(t);};
 $('#dDel').onclick=()=>{const t=task(openId);if(t&&confirm('¿Eliminar esta tarea?')){delTask(t);save();}};
-$('#dAddProp').onclick=e=>addPropMenu(e.target,view(cur));
+$('#dAddProp').onclick=e=>{const t=task(openId);if(t)addShowPropMenu(e.target,t);};
 </script>
 <script>
 'use strict';
@@ -1662,6 +1718,19 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ============================ ARRANQUE ============================ */
+/* Migraciones: idempotentes (se pueden ejecutar dos veces sin efecto) y
+   nunca destructivas — jamás borran campos que no conozcan, porque otro
+   dispositivo con una versión más nueva puede haberlos sincronizado. */
+function migrate(){
+ const s=D.settings;
+ if(!Array.isArray(s.defaultVisibleProps))s.defaultVisibleProps=['date','status','desc'];
+ if(s.calDurationMin==null)s.calDurationMin=60;
+ /* Nota: las propiedades que ya tienen datos en una tarea siguen visibles en
+    esa tarea por la regla hasValue(), así que no hace falta tocar drawerShow
+    de los usuarios existentes: nada desaparece y las tareas nuevas quedan
+    limpias, que es justo lo pedido. */
+ D.version=Math.max(D.version||1,2);
+}
 async function boot(){
  await idb.open();
  const savedDoc=await idb.get('doc'),savedMeta=await idb.get('meta');
@@ -1675,6 +1744,7 @@ async function boot(){
   }catch(_){/* sin archivo inicial */}
  }
  // migraciones suaves
+ migrate();
  D.views.forEach(v=>{v.filters=v.filters||[];v.cols=v.cols||['name'];});
  applyTheme();
  cur=(D.views.find(v=>!v.hidden)||D.views[0]).id;
