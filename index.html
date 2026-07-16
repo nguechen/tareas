@@ -389,6 +389,12 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=p=>(p||'x')+'_'+Math.random().toString(36).slice(2,10);
 const nowISO=()=>new Date().toISOString();
+/* Compara marcas de tiempo mezcladas: los objetos recién creados llevan
+   updatedAt:0 (número) y los editados una fecha ISO (texto). Comparar
+   '2026-…' > 0 hace que JS convierta el texto a NaN y devuelva SIEMPRE false,
+   así que sin este normalizador los cambios remotos de vistas, propiedades y
+   ajustes nunca ganaban. */
+const isNewer=(a,b)=>String(a||'')>String(b||'');
 const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 const dOnly=v=>v?String(v).slice(0,10):'';
 const addDays=(s,n)=>{const d=new Date(s+'T12:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
@@ -1858,24 +1864,20 @@ async function handleImportFile(f){
   showMapping(rows);
  }catch(err){toast('Error: '+err.message);}
 }
-/* Restaurar un respaldo propio: fusiona sin duplicar (mismo id = gana la
-   versión más reciente), igual que la sincronización. */
+/* Restaurar un respaldo propio. Reutiliza mergeDocs, es decir EXACTAMENTE las
+   mismas reglas que la sincronización: mismo id = gana la versión más reciente,
+   nada se duplica, y se restauran también vistas, propiedades y configuración
+   (el JSON se anuncia como «respaldo completo», así que debe serlo). */
 function importBackup(j){
- let t=0,n=0;
- (j.tasks||[]).forEach(rt=>{const ex=D.tasks.find(x=>x.id===rt.id);
-  if(!ex){D.tasks.push(rt);t++;}
-  else if((rt.updatedAt||'')>(ex.updatedAt||''))Object.assign(ex,rt);});
- (j.notes||[]).forEach(rn=>{const ex=D.notes.find(x=>x.id===rn.id);
-  if(!ex){D.notes.push(rn);n++;}
-  else if((rn.updatedAt||'')>(ex.updatedAt||''))Object.assign(ex,rn);});
- if(j.props)mergeProps(j.props);
- collectOptions();save();
- return {tasks:t,notes:n};
+ const t0=D.tasks.length,n0=D.notes.length;
+ mergeDocs(j);
+ applyTheme();save();
+ return {tasks:D.tasks.length-t0,notes:D.notes.length-n0};
 }
 function mergeProps(remote){
  remote.forEach(rp=>{const lp=prop(rp.id);
   if(!lp)D.props.push(rp);
-  else if((rp.updatedAt||0)>(lp.updatedAt||0))Object.assign(lp,rp);});
+  else if(isNewer(rp.updatedAt,lp.updatedAt))Object.assign(lp,rp);});
 }
 function guessProp(h){
  const n=h.toLowerCase().trim();
@@ -2037,18 +2039,18 @@ function mergeDocs(remote){
  (remote.tasks||[]).forEach(rt=>{
   const lt=D.tasks.find(t=>t.id===rt.id);
   if(!lt)D.tasks.push(rt);
-  else if((rt.updatedAt||'')>(lt.updatedAt||''))Object.assign(lt,rt);});
+  else if(isNewer(rt.updatedAt,lt.updatedAt))Object.assign(lt,rt);});
  /* notas: misma regla que las tareas (gana el updatedAt mayor, las lápidas viajan) */
  (remote.notes||[]).forEach(rn=>{
   const ln=D.notes.find(n=>n.id===rn.id);
   if(!ln)D.notes.push(rn);
-  else if((rn.updatedAt||'')>(ln.updatedAt||''))Object.assign(ln,rn);});
+  else if(isNewer(rn.updatedAt,ln.updatedAt))Object.assign(ln,rn);});
  if(remote.props)mergeProps(remote.props);
  (remote.views||[]).forEach(rv=>{
   const lv=view(rv.id);
   if(!lv)D.views.push(rv);
-  else if((rv.updatedAt||0)>(lv.updatedAt||0)){const i=D.views.indexOf(lv);D.views[i]=rv;}});
- if(remote.settings&&(remote.settings.updatedAt||0)>(D.settings.updatedAt||0)){
+  else if(isNewer(rv.updatedAt,lv.updatedAt)){const i=D.views.indexOf(lv);D.views[i]=rv;}});
+ if(remote.settings&&isNewer(remote.settings.updatedAt,D.settings.updatedAt)){
   const cid=D.settings.clientId;D.settings=remote.settings;if(!D.settings.clientId)D.settings.clientId=cid;}
  // purgar tombstones de más de 60 días
  const cut=addDays(todayStr(),-60);
