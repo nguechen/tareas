@@ -246,6 +246,33 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
 .kbd{font-size:11px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--tx2)}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line2);border-radius:8px;padding:9px 16px;z-index:200;box-shadow:var(--shadow);display:none;font-size:13px}
 #toast.show{display:block}
+/* ---------- Notas ---------- */
+#btnNotes{flex:none;font-size:12.5px;padding:5px 9px}
+.notes-modal{width:940px;height:84vh;max-height:84vh}
+.notes-wrap{flex:1;display:flex;min-height:0}
+.notes-list{width:255px;flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.notes-tools{padding:9px;display:flex;flex-direction:column;gap:7px;border-bottom:1px solid var(--line)}
+.notes-tools input{width:100%}
+#nList{flex:1;overflow-y:auto;padding:6px}
+.nitem{padding:7px 9px;border-radius:var(--r);cursor:pointer;border:1px solid transparent}
+.nitem:hover{background:var(--bg2)}
+.nitem.on{background:var(--bg3);border-color:var(--line2)}
+.nitem .nt{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nitem .np{font-size:11.5px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.notes-ed{flex:1;overflow-y:auto;padding:14px 20px 30px;min-width:0}
+#nTitle{width:100%;background:none;border:none;font-size:22px;font-weight:700;padding:4px 0;color:var(--tx)}
+#nAddBlock{color:var(--tx3);padding:8px 0;font-size:13px;display:block}
+#nAddBlock:hover{color:var(--tx)}
+#nBack{display:none}
+.notes-empty{padding:50px 16px;text-align:center;color:var(--tx3);font-size:13px}
+@media(max-width:700px){
+  .notes-modal{width:100%;height:92vh;max-height:92vh}
+  .notes-list{width:100%}
+  .notes-wrap.ed .notes-list{display:none}
+  .notes-wrap:not(.ed) .notes-ed{display:none}
+  .notes-wrap.ed #nBack{display:grid}
+  #btnNotes .lbl{display:none}
+}
 @media(max-width:700px){
   header{flex-wrap:wrap;row-gap:8px}
   /* fila 1: logo · sincronización · ⚙ · Nuevo ; fila 2 (debajo de sincronización): buscador */
@@ -260,6 +287,7 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
 <header>
   <div class="logo"><span class="mark">✓</span> Tareas</div>
   <button id="syncChip" title="Estado de sincronización"><span class="dot" id="syncDot"></span><span id="syncTxt">Local</span></button>
+  <button class="btn" id="btnNotes" title="Notas">🗒 <span class="lbl">Notas</span></button>
   <input id="search" placeholder="Buscar tareas…  ( / )">
   <button id="searchMode" class="btn" title="Alcance de la búsqueda">🔍 Vista</button>
   <div class="spacer"></div>
@@ -318,6 +346,27 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
     <div class="m-top">Importar tareas <div class="spacer"></div><button class="iconbtn" data-close>✕</button></div>
     <div class="m-body" id="importBody"></div>
     <div class="m-foot"><button class="btn" data-close>Cancelar</button><button class="btn primary" id="impGo" style="display:none">Importar</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="mNotes">
+  <div class="modal notes-modal">
+    <div class="m-top">
+      <button class="iconbtn" id="nBack" title="Volver a la lista">‹</button>
+      Notas
+      <div class="spacer"></div>
+      <button class="iconbtn" data-close title="Cerrar">✕</button>
+    </div>
+    <div class="notes-wrap" id="nWrap">
+      <div class="notes-list">
+        <div class="notes-tools">
+          <input id="nSearch" placeholder="Buscar notas…">
+          <button class="btn primary" id="nNew">＋ Nueva nota</button>
+        </div>
+        <div id="nList"></div>
+      </div>
+      <div class="notes-ed" id="nEd"></div>
+    </div>
   </div>
 </div>
 
@@ -383,6 +432,7 @@ function defaultDoc(){
    P('edited','Editado','edited',{hidden:true}),
   ],
   tasks:[],
+  notes:[],
   views:[
    {id:'v_all',name:'Tabla',icon:'▦',kind:'table',smart:null,builtin:1,filters:[],sort:{prop:'date',dir:1},group:null,cols:['name','date','status','desc','prio','tags'],updatedAt:0},
    {id:'v_today',name:'Hoy',icon:'☀',kind:'table',smart:'today',builtin:1,filters:[],sort:{prop:'date',dir:1},group:null,cols:['name','date','status','prio','ctx'],updatedAt:0},
@@ -559,7 +609,7 @@ function closePop(){pop.classList.remove('show');pop.innerHTML='';document.remov
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2600);}
 
 /* ============================ RENDER RAÍZ ============================ */
-function render(){renderTabs();renderToolbar();renderMain();if(openId)renderDrawer();}
+function render(){renderTabs();renderToolbar();renderMain();if(openId)renderDrawer();if(notesOpen)renderNotes();}
 
 function renderTabs(){
  const nav=$('#tabs');nav.innerHTML='';
@@ -1345,6 +1395,74 @@ function renderMdBlock(box,b,owner){
  view();
 }
 
+/* ============================ NOTAS ============================
+   Las notas son "dueños de bloques" igual que las tareas, así que reutilizan
+   el motor de la fase 5 sin una sola línea nueva de bloques. Se sincronizan
+   con la misma regla que las tareas: gana el updatedAt más reciente y las
+   eliminaciones viajan como lápidas (deletedAt). */
+let notesOpen=false,curNote=null,noteQ='';
+const note=id=>D.notes.find(n=>n.id===id&&!n.deletedAt);
+const liveNotes=()=>D.notes.filter(n=>!n.deletedAt);
+function newNote(vals){
+ const n=Object.assign({id:uid('n'),title:'',blocks:[newBlock('md')],createdAt:nowISO(),updatedAt:nowISO()},vals||{});
+ D.notes.push(n);return n;
+}
+function delNote(n){n.deletedAt=nowISO();n.updatedAt=nowISO();if(curNote===n.id)curNote=null;}
+/* texto plano de una nota: sirve para el buscador y la vista previa */
+function noteText(n){
+ return (n.blocks||[]).map(b=>{
+  if(b.type==='md')return b.text||'';
+  if(b.type==='todo')return (b.items||[]).map(i=>i.text||'').join(' ');
+  if(b.type==='table')return (b.rows||[]).map(r=>Object.values(r.cells||{}).join(' ')).join(' ');
+  if(b.type==='db')return (b.rows||[]).map(r=>Object.values(r.v||{}).join(' ')).join(' ');
+  return '';}).join(' ').trim();
+}
+function openNotes(id){
+ notesOpen=true;
+ if(id!==undefined)curNote=id;
+ if(!curNote){const f=liveNotes()[0];curNote=f?f.id:null;}
+ $('#mNotes').classList.add('show');
+ renderNotes();
+}
+function closeNotes(){notesOpen=false;$('#mNotes').classList.remove('show');}
+function renderNotes(){
+ if(!notesOpen)return;
+ const q=noteQ.toLowerCase();
+ const list=liveNotes().filter(n=>!q||(n.title||'').toLowerCase().includes(q)||noteText(n).toLowerCase().includes(q))
+   .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
+ /* lista */
+ const box=$('#nList');box.innerHTML='';
+ if(!list.length)box.innerHTML=`<div class="notes-empty">${noteQ?'Sin resultados':'Aún no hay notas.<br>Crea una con «＋ Nueva nota».'}</div>`;
+ list.forEach(n=>{
+  const el=document.createElement('div');
+  el.className='nitem'+(n.id===curNote?' on':'');el.dataset.n=n.id;
+  el.innerHTML=`<div class="nt">${esc(n.title)||'Sin título'}</div>
+    <div class="np">${esc(noteText(n).slice(0,70))||'Vacía'}</div>`;
+  el.onclick=()=>{curNote=n.id;$('#nWrap').classList.add('ed');renderNotes();};
+  box.appendChild(el);
+ });
+ /* editor */
+ const ed=$('#nEd');const n=note(curNote);
+ if(!n){ed.innerHTML=`<div class="notes-empty">Elige una nota o crea una nueva.</div>`;return;}
+ ed.innerHTML=`<div style="display:flex;align-items:center;gap:8px">
+   <input id="nTitle" placeholder="Sin título" value="${esc(n.title)}">
+   <button class="btn danger" id="nDel" title="Eliminar nota">Eliminar</button></div>
+  <button id="nAddBlock">Añadir elemento</button>
+  <div id="nBlocks"></div>`;
+ const ti=$('#nTitle');
+ ti.onchange=()=>{n.title=ti.value;n.updatedAt=nowISO();save();};
+ ti.onkeydown=e=>{if(e.key==='Enter')e.target.blur();};
+ $('#nDel').onclick=()=>{if(confirm('¿Eliminar esta nota?')){delNote(n);save();}};
+ $('#nAddBlock').onclick=e=>blockMenu(e.target,n,['md','table','db','todo']);
+ renderBlocks($('#nBlocks'),n);
+}
+$('#btnNotes').onclick=()=>openNotes();
+$('#nNew').onclick=()=>{const n=newNote();curNote=n.id;$('#nWrap').classList.add('ed');save();
+ setTimeout(()=>{const t=$('#nTitle');if(t)t.focus();},60);};
+$('#nSearch').oninput=e=>{noteQ=e.target.value.trim();renderNotes();};
+$('#nBack').onclick=()=>{$('#nWrap').classList.remove('ed');};
+$('#mNotes').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeNotes();});
+
 /* ---------- DRAWER ---------- */
 function openDrawer(id){openId=id;renderDrawer();$('#drawer').classList.add('open');}
 function closeDrawer(){openId=null;$('#drawer').classList.remove('open');}
@@ -1598,7 +1716,7 @@ function exportRows(){
 }
 function doExport(kind){
  const stamp=todayStr();
- if(kind==='json')return download('tareas-'+stamp+'.json',JSON.stringify({format:'tareas-app',version:1,exported:nowISO(),props:D.props,views:D.views,settings:D.settings,tasks:liveTasks()},null,1));
+ if(kind==='json')return download('tareas-'+stamp+'.json',JSON.stringify({format:'tareas-app',version:1,exported:nowISO(),props:D.props,views:D.views,settings:D.settings,tasks:liveTasks(),notes:liveNotes()},null,1));
  const rows=exportRows();
  if(kind==='csv'){
   const csv='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
@@ -1649,11 +1767,9 @@ async function handleImportFile(f){
   if(/\.json$/i.test(f.name)){
    const j=JSON.parse(await f.text());
    if(j&&j.format==='tareas-app'&&Array.isArray(j.tasks)){ // respaldo propio
-    let n=0;j.tasks.forEach(rt=>{const ex=D.tasks.find(t=>t.id===rt.id);
-     if(!ex){D.tasks.push(rt);n++;}
-     else if((rt.updatedAt||'')>(ex.updatedAt||''))Object.assign(ex,rt);});
-    if(j.props)mergeProps(j.props);
-    collectOptions();save();$('#mImport').classList.remove('show');toast(n+' tareas importadas del respaldo');return;}
+    const r=importBackup(j);
+    $('#mImport').classList.remove('show');
+    toast(r.tasks+' tareas y '+r.notes+' notas importadas del respaldo');return;}
    const arr=Array.isArray(j)?j:(j.tasks||[]);
    if(!arr.length)return toast('El JSON no contiene tareas');
    const keys=[...new Set(arr.flatMap(o=>Object.keys(o)))];
@@ -1673,6 +1789,20 @@ async function handleImportFile(f){
   if(!rows||rows.length<2)return toast('El archivo no tiene filas de datos');
   showMapping(rows);
  }catch(err){toast('Error: '+err.message);}
+}
+/* Restaurar un respaldo propio: fusiona sin duplicar (mismo id = gana la
+   versión más reciente), igual que la sincronización. */
+function importBackup(j){
+ let t=0,n=0;
+ (j.tasks||[]).forEach(rt=>{const ex=D.tasks.find(x=>x.id===rt.id);
+  if(!ex){D.tasks.push(rt);t++;}
+  else if((rt.updatedAt||'')>(ex.updatedAt||''))Object.assign(ex,rt);});
+ (j.notes||[]).forEach(rn=>{const ex=D.notes.find(x=>x.id===rn.id);
+  if(!ex){D.notes.push(rn);n++;}
+  else if((rn.updatedAt||'')>(ex.updatedAt||''))Object.assign(ex,rn);});
+ if(j.props)mergeProps(j.props);
+ collectOptions();save();
+ return {tasks:t,notes:n};
 }
 function mergeProps(remote){
  remote.forEach(rp=>{const lp=prop(rp.id);
@@ -1840,6 +1970,11 @@ function mergeDocs(remote){
   const lt=D.tasks.find(t=>t.id===rt.id);
   if(!lt)D.tasks.push(rt);
   else if((rt.updatedAt||'')>(lt.updatedAt||''))Object.assign(lt,rt);});
+ /* notas: misma regla que las tareas (gana el updatedAt mayor, las lápidas viajan) */
+ (remote.notes||[]).forEach(rn=>{
+  const ln=D.notes.find(n=>n.id===rn.id);
+  if(!ln)D.notes.push(rn);
+  else if((rn.updatedAt||'')>(ln.updatedAt||''))Object.assign(ln,rn);});
  if(remote.props)mergeProps(remote.props);
  (remote.views||[]).forEach(rv=>{
   const lv=view(rv.id);
@@ -1850,6 +1985,7 @@ function mergeDocs(remote){
  // purgar tombstones de más de 60 días
  const cut=addDays(todayStr(),-60);
  D.tasks=D.tasks.filter(t=>!t.deletedAt||dOnly(t.deletedAt)>cut);
+ D.notes=D.notes.filter(n=>!n.deletedAt||dOnly(n.deletedAt)>cut);
  collectOptions();
 }
 async function syncNow(manual){
@@ -1864,7 +2000,7 @@ async function syncNow(manual){
   let remote=null;
   try{remote=await(await dFetch('https://www.googleapis.com/drive/v3/files/'+id+'?alt=media')).json();}catch(_){/* archivo vacío */}
   mergeDocs(remote);
-  const payload={format:'tareas-app',version:1,savedAt:nowISO(),props:D.props,views:D.views,settings:D.settings,tasks:D.tasks};
+  const payload={format:'tareas-app',version:1,savedAt:nowISO(),props:D.props,views:D.views,settings:D.settings,tasks:D.tasks,notes:D.notes};
   await dFetch('https://www.googleapis.com/upload/drive/v3/files/'+id+'?uploadType=media',{
    method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   M.pending=Math.max(0,M.pending-before);M.lastSync=nowISO();M.lastError=null;
@@ -2021,7 +2157,7 @@ $('#searchMode').onclick=()=>{searchGlobal=!searchGlobal;updSearchModeBtn();
 updSearchModeBtn();
 $$('.overlay').forEach(o=>{o.onclick=e=>{if(e.target===o||e.target.closest('[data-close]'))o.classList.remove('show');};});
 document.addEventListener('keydown',e=>{
- if(e.key==='Escape'){closePop();closeDrawer();$$('.overlay').forEach(o=>o.classList.remove('show'));}
+ if(e.key==='Escape'){closePop();closeDrawer();notesOpen=false;$$('.overlay').forEach(o=>o.classList.remove('show'));}
  if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();$('#search').focus();}
  if(e.key==='n'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$('#btnNew').click();}
 });
@@ -2034,6 +2170,7 @@ function migrate(){
  const s=D.settings;
  if(!Array.isArray(s.defaultVisibleProps))s.defaultVisibleProps=['date','status','desc'];
  if(s.calDurationMin==null)s.calDurationMin=60;
+ if(!Array.isArray(D.notes))D.notes=[];
  /* Nota: las propiedades que ya tienen datos en una tarea siguen visibles en
     esa tarea por la regla hasValue(), así que no hace falta tocar drawerShow
     de los usuarios existentes: nada desaparece y las tareas nuevas quedan
