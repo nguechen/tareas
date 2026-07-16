@@ -339,7 +339,7 @@ function defaultDoc(){
    {id:'v_cal',name:'Calendario',icon:'▦',kind:'calendar',smart:null,builtin:1,filters:[],sort:{prop:'date',dir:1},group:null,cols:['name'],updatedAt:0},
    {id:'v_board',name:'Tablero',icon:'▥',kind:'board',smart:'open',builtin:1,filters:[],sort:{prop:'date',dir:1},group:'status',cols:['name','date'],updatedAt:0},
   ],
-  settings:{theme:'dark',accent:'#2383e2',clientId:'',autoSync:true,calSync:false,calId:'primary',updatedAt:0},
+  settings:{theme:'dark',accent:'#2383e2',clientId:'',autoSync:true,calSync:false,calId:'primary',calDurationMin:60,updatedAt:0},
  };
 }
 
@@ -1503,9 +1503,20 @@ function calEventBody(t){
  parts.push('— Creado desde la app Tareas');
  const body={summary:(isDone(t)?'✓ ':'')+(t.v.name||'Sin título'),description:parts.join('\n')};
  const dv=t.v.date;
- if(dv.length>10){const s=new Date(dv),e=new Date(s.getTime()+3600000);
-  body.start={dateTime:isoLocal(s)};body.end={dateTime:isoLocal(e)};}
- else{body.start={date:dv};body.end={date:addDays(dv,1)};}
+ /* IMPORTANTE: un EventDateTime no puede llevar `date` y `dateTime` a la vez.
+    Enviamos null en la variante que no toca para que Google la borre; si no,
+    una tarea que nació sin hora se quedaría para siempre como "todo el día". */
+ let tz='';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'';}catch(_){}
+ if(dv.length>10){
+  const mins=+D.settings.calDurationMin||60;
+  const s=new Date(dv),e=new Date(s.getTime()+mins*60000);
+  body.start={dateTime:isoLocal(s),date:null};
+  body.end  ={dateTime:isoLocal(e),date:null};
+  if(tz){body.start.timeZone=tz;body.end.timeZone=tz;}
+ }else{
+  body.start={date:dv,            dateTime:null};
+  body.end  ={date:addDays(dv,1), dateTime:null};
+ }
  return body;
 }
 const CAL_BASE=()=>'https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(D.settings.calId||'primary')+'/events';
@@ -1513,7 +1524,10 @@ async function calUpsert(t){
  const body=JSON.stringify(calEventBody(t));
  const opt={headers:{'Content-Type':'application/json'},body};
  if(t.gcalId){
-  try{await dFetch(CAL_BASE()+'/'+t.gcalId,Object.assign({method:'PATCH'},opt));return;}
+  /* PUT (reemplazo total) en vez de PATCH: el PATCH de Google fusiona los objetos
+     start/end, así que al pasar de "todo el día" a evento con hora quedaban `date`
+     y `dateTime` juntos y la API rechazaba TODA la petición (ni hora ni descripción). */
+  try{await dFetch(CAL_BASE()+'/'+t.gcalId,Object.assign({method:'PUT'},opt));return;}
   catch(err){if(!/\b(404|410)\b/.test(err.message))throw err;/* evento borrado a mano → recrear */}
  }
  const r=await dFetch(CAL_BASE(),Object.assign({method:'POST'},opt));
@@ -1529,6 +1543,10 @@ async function pushCalendar(manual){
  if(!D.settings.calSync){if(manual)toast('Activa la sincronización con Calendar');return;}
  if(!navigator.onLine){if(manual)toast('Sin conexión: se enviará al volver internet');return;}
  if(calPushing)return;calPushing=true;syncUI();
+ /* Reparación única: los eventos creados por la versión con el fallo de PATCH
+    quedaron mal (sin hora / sin descripción) pero con su firma "al día", así que
+    se saltarían. Limpiamos las firmas una sola vez para reescribirlos todos. */
+ if(!M.calRepair){M.calRepair=nowISO();D.tasks.forEach(t=>{if(t.gcalId)delete t.gcalSig;});persist();}
  let changed=0,errs=0,firstErr='';
  const wait=ms=>new Promise(r=>setTimeout(r,ms));
  try{
