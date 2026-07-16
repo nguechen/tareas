@@ -101,8 +101,10 @@ tr.trow.sel td{background:color-mix(in srgb,var(--acc) 12%,var(--bg))}
 tr.done .tname{color:var(--tx3);text-decoration:line-through}
 .tname{font-weight:500;display:flex;align-items:center;gap:7px;overflow:hidden}
 .tname .txt{overflow:hidden;text-overflow:ellipsis}
-.openb{opacity:0;font-size:11px;border:1px solid var(--line2);border-radius:4px;padding:1px 6px;color:var(--tx2);flex:none;background:var(--bg2)}
-tr:hover .openb{opacity:1}
+/* Siempre visible: en pantallas táctiles no existe el :hover, así que un botón
+   que sólo aparece al pasar el ratón es un botón que no existe en el móvil. */
+.openb{opacity:.7;font-size:11px;border:1px solid var(--line2);border-radius:4px;padding:1px 6px;color:var(--tx2);flex:none;background:var(--bg2)}
+tr:hover .openb,.openb:hover,.openb:focus{opacity:1;color:var(--tx);border-color:var(--tx3)}
 .donechk{width:15px;height:15px;border-radius:50%;border:1.6px solid var(--tx3);flex:none;display:grid;place-items:center;font-size:10px;color:#fff;cursor:pointer}
 .donechk.on{background:var(--ok);border-color:var(--ok)}
 .tag{display:inline-flex;align-items:center;border-radius:4px;padding:1px 7px;font-size:12px;color:#fff;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -132,9 +134,8 @@ tr:hover .openb{opacity:1}
 .chip.od{border-color:var(--err);color:var(--err)}
 .chip.dn{opacity:.5;text-decoration:line-through}
 .chip:hover{background:var(--bg4)}
-.cal-day .qadd{border:none;background:none;color:transparent;font-size:12px;text-align:left;padding:1px 6px;flex:1;min-height:14px}
-.cal-day:hover .qadd{color:var(--tx3)}
-.cal-day .qadd:focus{color:var(--tx);background:var(--bg3);border-radius:4px}
+.cal-day .qadd{border:none;background:none;color:var(--tx3);opacity:.75;font-size:12px;text-align:left;padding:1px 6px;flex:1;min-height:14px;cursor:pointer}
+.cal-day:hover .qadd,.cal-day .qadd:hover,.cal-day .qadd:focus{opacity:1;color:var(--tx);background:var(--bg3);border-radius:4px}
 
 /* ---------- Board ---------- */
 #board{display:flex;gap:12px;padding:14px;overflow-x:auto;height:100%;align-items:flex-start}
