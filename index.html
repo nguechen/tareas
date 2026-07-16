@@ -187,6 +187,26 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
 .todo-it.done .todo-txt{color:var(--tx3);text-decoration:line-through}
 .todo-it .xrow{color:var(--tx3);background:none;border:none;padding:0 4px}
 .todo-it .xrow:hover{color:var(--err)}
+/* ---------- Markdown ---------- */
+.md{padding:4px 2px;line-height:1.6;cursor:text;overflow-wrap:anywhere}
+.md:hover{background:var(--bg3);border-radius:var(--r)}
+.md h1{font-size:20px;margin:8px 0 4px} .md h2{font-size:17px;margin:8px 0 4px}
+.md h3{font-size:15px;margin:6px 0 3px} .md h4,.md h5,.md h6{font-size:13.5px;margin:6px 0 3px}
+.md p{margin:5px 0} .md ul,.md ol{margin:5px 0 5px 20px} .md li{margin:2px 0}
+.md li.md-task{list-style:none;margin-left:-16px}
+.md blockquote{border-left:3px solid var(--line2);margin:6px 0;padding:2px 10px;color:var(--tx2)}
+.md hr{border:none;border-top:1px solid var(--line);margin:10px 0}
+.md code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:12.5px;font-family:ui-monospace,Menlo,Consolas,monospace}
+.md pre{background:var(--bg3);padding:9px 11px;border-radius:6px;overflow-x:auto;margin:7px 0}
+.md pre code{background:none;padding:0;white-space:pre}
+.md a{text-decoration:underline}
+.md table.md-table{border-collapse:collapse;margin:7px 0;font-size:13px}
+.md .md-table th,.md .md-table td{border:1px solid var(--line);padding:4px 8px;text-align:left}
+.md .md-table th{background:var(--bg3)}
+.md img{max-width:100%}
+.blk-body textarea{width:100%;min-height:60px;border:2px solid var(--acc);border-radius:var(--r);background:var(--bg);
+  padding:7px 9px;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;
+  display:block;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;color:inherit}
 
 /* ---------- Popover / menus ---------- */
 #pop{position:fixed;z-index:100;background:var(--bg2);border:1px solid var(--line2);border-radius:8px;box-shadow:var(--shadow);min-width:220px;max-width:330px;max-height:60vh;overflow-y:auto;display:none;padding:5px}
@@ -717,7 +737,9 @@ function editCell(el,t,p){
   else render();};
  inp.onblur=()=>commit(true);
  inp.onkeydown=e=>{
-  if(e.key==='Escape'){commit(false);return;}
+  /* Escape cancela SÓLO la edición: sin esto el evento sube al manejador
+     global y además cierra el panel de la tarea. */
+  if(e.key==='Escape'){e.stopPropagation();commit(false);return;}
   if(e.key==='Enter'){
    if(!multi){commit(true);return;}                        // una línea: Enter guarda
    if(e.ctrlKey||e.metaKey){e.preventDefault();commit(true);} // multilínea: Ctrl/Cmd+Enter guarda
@@ -1071,12 +1093,16 @@ function renderBoard(main,v){
    Motor compartido. No sabe qué es su dueño: le basta un objeto con .blocks y
    un updatedAt (tareas ahora; notas en la fase 7). Los bloques viven DENTRO de
    su dueño, así que viajan con él en la sincronización sin trabajo extra. */
-const BLOCK_TYPES={table:{n:'Tabla',ic:'▦'},db:{n:'Base de datos',ic:'🗄'},todo:{n:'To-do list',ic:'☑'}};
+const BLOCK_TYPES={md:{n:'Texto (Markdown)',ic:'≡'},table:{n:'Tabla',ic:'▦'},db:{n:'Base de datos',ic:'🗄'},todo:{n:'To-do list',ic:'☑'}};
+/* Qué elementos ofrece cada dueño: las tareas sólo los 3 pedidos; las notas
+   añaden Markdown (fase 7). */
+const TASK_BLOCKS=['table','db','todo'];
 const DB_TYPES={text:'Texto',number:'Número',select:'Selección',checkbox:'Casilla',date:'Fecha'};
 
 const blocksOf=o=>(o.blocks=o.blocks||[]);
 function newBlock(type){
  const b={id:uid('b'),type,title:'',updatedAt:nowISO()};
+ if(type==='md')b.text='';
  if(type==='table')Object.assign(b,{cols:[{id:uid('c'),name:'Columna 1'},{id:uid('c'),name:'Columna 2'}],rows:[]});
  if(type==='db')Object.assign(b,{props:[{id:uid('dp'),name:'Nombre',type:'text'},{id:uid('dp'),name:'Estado',type:'select',options:[]}],rows:[]});
  if(type==='todo')Object.assign(b,{items:[]});
@@ -1090,10 +1116,11 @@ function blkChanged(owner,b,redraw){
  owner.updatedAt=nowISO();
  save(redraw?undefined:{noRender:true});
 }
-function blockMenu(anchor,owner){
+function blockMenu(anchor,owner,types){
+ const allow=types||TASK_BLOCKS;
  openPop(`<div class="mhead">Añadir elemento</div>
-  ${Object.entries(BLOCK_TYPES).map(([k,v])=>
-   `<button class="mi" data-blk="${k}"><span class="mic">${v.ic}</span>${v.n}</button>`).join('')}`,
+  ${allow.map(k=>{const v=BLOCK_TYPES[k];
+   return `<button class="mi" data-blk="${k}"><span class="mic">${v.ic}</span>${v.n}</button>`;}).join('')}`,
   anchor,pp=>pp.querySelectorAll('[data-blk]').forEach(b=>b.onclick=()=>{
    blocksOf(owner).push(newBlock(b.dataset.blk));
    blkChanged(owner,null,true);closePop();}));
@@ -1111,7 +1138,8 @@ function renderBlocks(box,owner){
    if(!confirm('¿Eliminar este elemento?'))return;
    owner.blocks=blocksOf(owner).filter(x=>x.id!==b.id);blkChanged(owner,null,true);};
   const body=el.querySelector('.blk-body');
-  if(b.type==='table')renderTableBlock(body,b,owner);
+  if(b.type==='md')renderMdBlock(body,b,owner);
+  else if(b.type==='table')renderTableBlock(body,b,owner);
   else if(b.type==='db')renderDbBlock(body,b,owner);
   else if(b.type==='todo')renderTodoBlock(body,b,owner);
   box.appendChild(el);
@@ -1215,6 +1243,106 @@ function renderTodoBlock(box,b,owner){
   const it=b.items.find(x=>x.id===i.dataset.todotxt);if(it)it.text=i.value;blkChanged(owner,b,false);});
  box.querySelectorAll('[data-tododel]').forEach(btn=>btn.onclick=()=>{
   b.items=b.items.filter(x=>x.id!==btn.dataset.tododel);blkChanged(owner,b,true);});
+}
+
+/* ============================ MARKDOWN ============================
+   Renderizador propio, pequeño y seguro. Regla de oro: se escapa TODO el
+   texto primero (esc) y sólo después se aplica el Markdown sobre lo ya
+   escapado. Así nunca puede colarse HTML del usuario, ni dentro de tablas,
+   citas o encabezados. Los enlaces sólo admiten http/https/mailto. */
+function safeUrl(u){
+ const t=String(u||'').trim().replace(/&amp;/g,'&').replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+ if(/^(https?:|mailto:)/i.test(t))return t;
+ if(/^(#|\/|\.\/)/.test(t))return t;
+ if(/^[\w.-]+\.[a-z]{2,}([/?#]|$)/i.test(t))return 'https://'+t;   // "ejemplo.com"
+ return '';   // javascript:, data:, vbscript:, file:… fuera
+}
+function mdToHtml(src){
+ if(src==null||src==='')return'';
+ let s=esc(String(src)).replace(/\r\n?/g,'\n');
+ /* 1) apartar el código antes de nada: dentro no se interpreta Markdown */
+ const fences=[],inls=[];
+ s=s.replace(/```[\w-]*\n?([\s\S]*?)```/g,(m,body)=>{
+  fences.push(body.replace(/\n$/,''));return'\u0000F'+(fences.length-1)+'\u0000';});
+ s=s.replace(/`([^`\n]+)`/g,(m,c)=>{inls.push(c);return'\u0000I'+(inls.length-1)+'\u0000';});
+
+ const inline=t=>t
+  .replace(/\*\*\*(\S(?:[^*]*\S)?)\*\*\*/g,'<strong><em>$1</em></strong>')
+  .replace(/\*\*(\S(?:[^*]*\S)?)\*\*/g,'<strong>$1</strong>')
+  .replace(/(^|[^\w*])\*(\S(?:[^*\n]*\S)?)\*(?![\w*])/g,'$1<em>$2</em>')
+  .replace(/(^|[^\w_])__(\S(?:[^_]*\S)?)__/g,'$1<strong>$2</strong>')
+  .replace(/(^|[^\w_])_(\S(?:[^_\n]*\S)?)_(?![\w_])/g,'$1<em>$2</em>')
+  .replace(/~~(\S(?:[^~]*\S)?)~~/g,'<del>$1</del>')
+  .replace(/\[([^\]]*)\]\(([^)\s]*)\)/g,(m,tx,u)=>{
+   const h=safeUrl(u);
+   return h?`<a href="${h}" target="_blank" rel="noopener noreferrer">${tx||h}</a>`:tx;});
+
+ const L=s.split('\n'),out=[];let i=0;
+ const isUl=l=>/^\s*[-*+]\s+/.test(l),isOl=l=>/^\s*\d+[.)]\s+/.test(l);
+ const isFence=l=>/^\u0000F\d+\u0000$/.test(l.trim());
+ const isHr=l=>/^(---+|\*\*\*+|___+)\s*$/.test(l.trim());
+ const cells=l=>l.replace(/^\s*\|/,'').replace(/\|\s*$/,'').split('|').map(x=>x.trim());
+ while(i<L.length){
+  const l=L[i];
+  if(!l.trim()){i++;continue;}
+  let m;
+  if(m=/^(#{1,6})\s+(.*)$/.exec(l)){out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`);i++;continue;}
+  if(isHr(l)){out.push('<hr>');i++;continue;}
+  if(isFence(l)){out.push(l.trim());i++;continue;}
+  /* tabla: cabecera + línea separadora |---|---| */
+  if(/\|/.test(l)&&i+1<L.length&&/\|/.test(L[i+1])&&/^[\s|:-]*-[\s|:-]*$/.test(L[i+1])){
+   const head=cells(l);i+=2;const rows=[];
+   while(i<L.length&&L[i].trim()&&/\|/.test(L[i])){rows.push(cells(L[i]));i++;}
+   out.push('<table class="md-table"><thead><tr>'+head.map(x=>`<th>${inline(x)}</th>`).join('')+
+    '</tr></thead><tbody>'+rows.map(r=>'<tr>'+head.map((_,x)=>`<td>${inline(r[x]||'')}</td>`).join('')+'</tr>').join('')+
+    '</tbody></table>');continue;}
+  /* ojo: esc() ya convirtió '>' en '&gt;', así que la cita se busca así */
+  if(/^&gt;\s?/.test(l)){const b=[];
+   while(i<L.length&&/^&gt;\s?/.test(L[i])){b.push(L[i].replace(/^&gt;\s?/,''));i++;}
+   out.push('<blockquote>'+inline(b.join('<br>'))+'</blockquote>');continue;}
+  if(isUl(l)||isOl(l)){const ol=isOl(l),items=[];
+   while(i<L.length&&(ol?isOl(L[i]):isUl(L[i]))){
+    items.push(L[i].replace(ol?/^\s*\d+[.)]\s+/:/^\s*[-*+]\s+/,''));i++;}
+   out.push(`<${ol?'ol':'ul'}>`+items.map(x=>{
+    const t=/^\[([ xX])\]\s+/.exec(x);
+    return t?`<li class="md-task"><input type="checkbox" disabled ${/x/i.test(t[1])?'checked':''}> ${inline(x.replace(/^\[([ xX])\]\s+/,''))}</li>`
+            :`<li>${inline(x)}</li>`;}).join('')+`</${ol?'ol':'ul'}>`);continue;}
+  const p=[];
+  while(i<L.length&&L[i].trim()&&!isHr(L[i])&&!isFence(L[i])&&
+        !/^(#{1,6}\s|&gt;)/.test(L[i])&&!isUl(L[i])&&!isOl(L[i])){p.push(L[i]);i++;}
+  if(!p.length){i++;continue;}                    // red de seguridad anti-bucle
+  out.push('<p>'+inline(p.join('<br>'))+'</p>');
+ }
+ return out.join('\n')
+  .replace(/\u0000I(\d+)\u0000/g,(m,n)=>'<code>'+inls[+n]+'</code>')
+  .replace(/\u0000F(\d+)\u0000/g,(m,n)=>'<pre><code>'+fences[+n]+'</code></pre>');
+}
+/* ---------- Bloque de texto Markdown (lo usan las notas) ---------- */
+function renderMdBlock(box,b,owner){
+ const view=()=>{
+  box.innerHTML=`<div class="md" data-mdview>${b.text?mdToHtml(b.text)
+    :'<span style="color:var(--tx3)">Escribe con Markdown…</span>'}</div>`;
+  box.querySelector('[data-mdview]').onclick=e=>{
+   if(e.target.tagName==='A')return;              // dejar navegar los enlaces
+   if(e.target.type==='checkbox')return;
+   edit();};
+ };
+ const edit=()=>{
+  box.innerHTML=`<textarea data-mdedit rows="1">${esc(b.text||'')}</textarea>`;
+  const ta=box.querySelector('[data-mdedit]');
+  const grow=()=>{ta.style.height='auto';ta.style.height=(ta.scrollHeight||34)+'px';};
+  grow();ta.oninput=grow;
+  ta.focus();try{const L=ta.value.length;ta.setSelectionRange(L,L);}catch(_){}
+  let done=false;
+  const commit=ok=>{if(done)return;done=true;
+   if(ok&&ta.value!==(b.text||'')){b.text=ta.value;blkChanged(owner,b,false);}
+   view();};
+  ta.onblur=()=>commit(true);
+  ta.onkeydown=e=>{
+   if(e.key==='Escape'){e.stopPropagation();commit(false);return;}
+   if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();commit(true);}};
+ };
+ view();
 }
 
 /* ---------- DRAWER ---------- */
