@@ -12,6 +12,11 @@ Aplicación de tareas personal estilo Notion: funciona 100 % sin internet, se in
 | `icon-192.png`, `icon-512.png` | Iconos de la app |
 | `tareas-iniciales.json` | Tus 108 tareas ya convertidas desde tu export de Notion |
 | `INSTRUCCIONES.md` | Este archivo |
+| `CHANGELOG.md` | Qué cambió en cada versión |
+| `AGENT_PLAN.md` | Plan técnico de desarrollo (no hace falta subirlo al hosting) |
+| `tests/` | Pruebas automáticas del proyecto (no hace falta subirlas) |
+
+> Para publicar bastan los 6 primeros archivos. `AGENT_PLAN.md`, `CHANGELOG.md` y `tests/` son documentación y no afectan a la app.
 
 ---
 
@@ -92,6 +97,38 @@ Al pulsar el indicador ves: última fecha/hora de sincronización, cantidad de c
 
 ---
 
+## 4b · Conectar Google Calendar (opcional, una vía)
+
+Cada tarea **con fecha** puede crear y mantener al día un evento en tu Google Calendar. Es de **una sola dirección**: la app manda al calendario, no al revés.
+
+1. Necesitas el mismo **ID de cliente** del paso 3. Si ya conectaste Drive, no hay que crear nada nuevo.
+2. Añade el permiso de calendario a tu proyecto: Google Cloud Console → **APIs y servicios → Pantalla de consentimiento de OAuth → Editar → Permisos → Agregar o quitar permisos** → busca y marca `.../auth/calendar.events` → **Actualizar** y **Guardar**.
+3. En la app: **⚙ Configuración → Google Calendar** → marca **Activar sincronización con Calendar** → acepta el permiso que pide Google (verás una pantalla nueva, distinta de la de Drive).
+4. **Calendario destino**: deja `primary` para tu calendario principal, o pega el ID de otro (en Google Calendar: Configuración del calendario → Integrar calendario → ID de calendario).
+
+Qué hace, una vez activo:
+
+- Tarea con fecha → aparece el evento (con hora si la pusiste; si no, evento de todo el día).
+- Cambias fecha, hora, título o descripción → el evento se actualiza.
+- Completas la tarea → el evento lleva un ✓ delante.
+- Borras la tarea o le quitas la fecha → el evento se elimina.
+- Nunca duplica: cada tarea recuerda su evento.
+
+Sincroniza sola ~4 s después de cada cambio, cada 2 minutos y al recuperar internet. La misma sección muestra la última fecha de envío o el error exacto que devuelva Google.
+
+**Si algo falla**, el mensaje de error indica la causa:
+
+| Mensaje | Qué hacer |
+|---|---|
+| `403 · insufficient authentication scopes` | Falta el permiso de calendario: repite el paso 2 y reconecta marcando la casilla |
+| `403` sin mencionar *scopes* | Tu cuenta no puede escribir en ese calendario: en Google Calendar dale **"Hacer cambios en los eventos"** a tu usuario |
+| `404 · Not Found` | El ID del calendario está mal o es de otra cuenta. Prueba con `primary` para descartar |
+| `401 · sesión caducada` | Pulsa **Reconectar y sincronizar ahora** |
+
+**Un aviso**: como es de una vía, si mueves o borras un evento **dentro de Google Calendar**, no se refleja en la app; la siguiente sincronización de esa tarea lo recreará o corregirá.
+
+---
+
 ## 5 · Uso sin conexión
 
 No hay que hacer nada especial: tras la primera visita, la app queda guardada en el dispositivo.
@@ -123,12 +160,65 @@ No hay que hacer nada especial: tras la primera visita, la app queda guardada en
 
 ## 8 · Referencia rápida de la interfaz
 
-- **Vistas**: pestañas arriba. Clic en la pestaña activa (o en ⋯) para renombrar, cambiar tipo (tabla/calendario/tablero), duplicar, ocultar o eliminar. **Arrástralas para reordenarlas**. `+ Vista nueva` crea vistas propias.
-- **Vistas automáticas**: Hoy (fecha ≤ hoy o en curso, nunca completadas) · Esta semana (próximos 7 días + vencidas) · Urgentes (prioridad Alta/Urgente + vencidas) · Delegadas (etiqueta Delegada, "A la espera" o campo "Delegada a") · Logbook (completadas) · Contextos (agrupadas por contexto).
-- **Tabla**: clic en cualquier celda para editar. Clic en el encabezado ordena; clic derecho en el encabezado da más opciones; arrastra encabezados para reordenar columnas; `＋` agrega propiedades. Casillas a la izquierda para selección múltiple → barra de **edición masiva** (estado, fecha, prioridad, completar, eliminar).
-- **Calendario**: ‹ › cambia de mes. **Arrastra una tarea a otro día** para cambiar su fecha. Escribe en "＋ tarea" dentro de un día para crearla ahí. Las vencidas se ven en rojo. Todo se refleja al instante en las tablas (y viceversa).
-- **Tablero**: arrastra tarjetas entre columnas para cambiar el estado.
-- **Estados**: edítalos en ⚙ → Propiedades → Status → Editar: crea nuevos, cambia colores y define si cuentan como "Por hacer", "En curso" o "Hecho" (esto controla las vistas automáticas).
-- **Fórmulas**: propiedad tipo Fórmula, p. ej. `dias({Fecha})` (días restantes) o `{Prioridad} + " · " + {Status}`.
-- **Atajos**: `N` nueva tarea · `/` buscar · `Esc` cerrar.
+### Secciones y vistas
+Arriba a la izquierda hay dos botones: **Tareas** y **🗒 Notas**, que llevan a cada sección.
+
+En Tareas, la barra de pestañas muestra solo **3 vistas ancladas** (por defecto Tabla, Hoy y Calendario) y un botón **⋯ Más** con el resto. Al abrir una vista desde «⋯ Más» aparece como pestaña temporal con una ✕ para cerrarla. Puedes **anclar/desanclar** cualquier vista desde su menú (⋯) o desde «⋯ Más». Clic en la pestaña activa (o en ⋯) para renombrar, cambiar tipo, duplicar, anclar, ocultar o eliminar. Arrástralas para reordenarlas. `+ Vista nueva` crea las tuyas.
+
+Vistas automáticas: **Hoy** (fecha ≤ hoy o en curso, nunca completadas) · **Esta semana** (próximos 7 días + vencidas) · **Urgentes** (prioridad Alta/Urgente + vencidas) · **Delegadas** (etiqueta Delegada, "A la espera" o campo "Delegada a") · **Logbook** (completadas) · **Contextos** (agrupadas por contexto).
+
+### Estado de sincronización
+Un icono, sin palabras (tócalo para ver el detalle): 🔴 error · ♻️ sincronizando · ⌛ hay cambios pendientes · ✅ todo a salvo en la nube · 🏠 solo en este dispositivo (Drive no conectado).
+
+### Buscador
+Arriba. El botón de al lado alterna el alcance:
+
+- **🔍 Vista** — busca solo dentro de la vista actual, respetando sus filtros.
+- **🌐 Global** — ignora los filtros y busca en todas tus tareas.
+
+No hay botón «Nuevo»: las tareas se crean desde la fila **＋ Nueva tarea** de la tabla, el **＋ tarea** de cada día del calendario, o el tablero. En un PC, la tecla **N** también crea una.
+
+### Filtros
+Botón **Filtro** de la barra. Puedes elegir cómo se combinan:
+
+- **Todos (Y)** — deben cumplirse todas las condiciones (comportamiento clásico).
+- **Cualquiera (O)** — basta con que se cumpla una: sirve para **sumar** grupos de tareas.
+
+Hay un atajo **⚡ Preset: Hoy + Vencidas (O)** que deja en una sola pantalla lo que hay que atender ya.
+
+### Tabla
+Clic en cualquier celda para editar. Clic en el encabezado ordena; clic derecho da más opciones; arrastra encabezados para reordenar columnas; `＋` añade columnas. Las casillas de la izquierda activan la **edición masiva** (estado, fecha, prioridad, completar, eliminar). El botón **ABRIR** está siempre visible en cada fila.
+
+### Calendario
+`‹ ›` cambia de mes. **Arrastra una tarea a otro día** para cambiar su fecha. En cada día hay un **＋ tarea** visible que abre la ficha con la fecha ya puesta. Las vencidas salen en rojo.
+
+### Tablero
+Arrastra tarjetas entre columnas para cambiar el estado.
+
+### La ficha de una tarea
+- Por defecto muestra solo **Fecha, Status y Descripción**. El resto está oculto hasta que tú lo actives.
+- **Añadir/mostrar propiedad** gestiona ambas cosas: el **ojo abierto/cerrado** muestra u oculta cada propiedad, y abajo puedes crear propiedades nuevas.
+- Si una tarea **ya tiene datos** en una propiedad (por ejemplo Prioridad), esa propiedad se sigue viendo **en esa tarea** aunque esté desactivada — nunca se esconde información. En el menú aparecen marcadas como «con datos».
+- **Añadir elemento** inserta bloques estilo Notion dentro de la tarea: **Tabla**, **Base de datos** (columnas con tipo) y **To-do list**. Puedes poner varios.
+- En **tablas y bases de datos** puedes ordenar por cualquier encabezado (botón ↕) y filtrar con la **lupa 🔍**. Es solo visual: no cambia tus datos ni se guarda.
+- En las columnas de **selección** creas opciones escribiéndolas; una **✕** borra las que no use nadie (si están en uso, la ✕ se desactiva y explica por qué).
+- En un **to-do**, al añadir un pendiente el cursor va directo al texto; **Enter** crea el siguiente, y **Enter en uno vacío** cierra la lista.
+- La descripción es una caja que **crece sola** y envuelve el texto. `Enter` hace salto de línea, `Ctrl/Cmd+Enter` guarda, `Esc` cancela.
+
+### Notas
+Botón **🗒 Notas** en la cabecera; abre la sección de notas. En el móvil, dentro de una nota hay un botón **«‹ Notas»** para volver a la lista.
+
+- Lista con buscador (mira el título, el contenido **y** el área) y **＋ Nueva nota**.
+- Las notas se **agrupan por área** (por defecto «Sin área»); los grupos se pliegan. El área se elige o se crea desde la propia nota, y **comparte lista con la propiedad «Area» de las tareas**.
+- Cada nota admite **Markdown** y los mismos elementos: tabla, base de datos y to-do list.
+- Markdown soportado: `# encabezados`, `**negrita**`, `*cursiva*`, `~~tachado~~`, `` `código` ``, bloques de código con ```, listas, listas de tareas `- [x]`, `> citas`, `---`, enlaces y tablas con `|`. Pulsa el texto para editarlo y toca fuera para verlo renderizado.
+- Se sincronizan y se respaldan igual que las tareas.
+
+### Notas dentro de una tarea
+La propiedad **Notas** enlaza notas de verdad. Al pulsarla puedes **buscar** y **vincular/desvincular** notas existentes, **crear una nueva** escribiendo el título (se crea, se vincula y se abre) y **abrir** cualquiera con su botón **ABRIR**, siempre visible. Una misma nota puede servir a varias tareas.
+
+### Otros
+- **Estados**: ⚙ → Propiedades → Status → Editar. Crea estados nuevos, cambia colores y define si cuentan como "Por hacer", "En curso" o "Hecho" (eso alimenta las vistas automáticas).
+- **Fórmulas**: propiedad tipo Fórmula, p. ej. `dias({Fecha})` o `{Prioridad} + " · " + {Status}`.
+- **Atajos**: `N` nueva tarea · `/` buscar · `Esc` cierra la capa de encima.
 - **Tema**: oscuro/claro y color de acento en ⚙ → Apariencia.
