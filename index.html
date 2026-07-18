@@ -247,6 +247,11 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line2);border-radius:8px;padding:9px 16px;z-index:200;box-shadow:var(--shadow);display:none;font-size:13px}
 #toast.show{display:block}
 /* ---------- Navegación de secciones ---------- */
+.tab.temp{border-style:dashed;opacity:.92}
+.tab .closetab{margin-left:2px;opacity:.7;font-size:11px}
+.tab .closetab:hover{opacity:1;color:var(--err)}
+.pinbtn{background:none;border:none;cursor:pointer;opacity:.75;padding:2px 6px}
+.pinbtn:hover{opacity:1}
 .nav{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--tx2);
   font-size:14px;font-weight:600;padding:6px 10px;border-radius:var(--r);cursor:pointer}
 .nav:hover{background:var(--bg2);color:var(--tx)}
@@ -290,7 +295,7 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
 @media(max-width:700px){
   header{flex-wrap:wrap;row-gap:8px}
   /* fila 1: logo · sincronización · ⚙ · Nuevo ; fila 2 (debajo de sincronización): buscador */
-  .logo,#syncChip,.spacer,#btnSettings,#btnNew{order:1}
+  #syncChip,.spacer,#btnSettings{order:1}
   #search{display:block;order:2;flex:1 1 200px;max-width:none;min-width:0}
   #searchMode{display:block;order:3;flex:0 0 auto}
   .dprop .dlab{width:100px}
@@ -301,12 +306,11 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
 <header>
   <button class="nav" id="navTasks" aria-current="page"><span class="mark">✓</span> <span class="lbl">Tareas</span></button>
   <button class="nav" id="navNotes">🗒 <span class="lbl">Notas</span></button>
-  <button id="syncChip" title="Estado de sincronización"><span class="dot" id="syncDot"></span><span id="syncTxt">Local</span></button>
+  <button id="syncChip" title="Estado de sincronización"><span class="sicon">🏠</span></button>
   <input id="search" placeholder="Buscar tareas…  ( / )">
   <button id="searchMode" class="btn" title="Alcance de la búsqueda">🔍 Vista</button>
   <div class="spacer"></div>
   <button class="iconbtn" id="btnSettings" title="Configuración">⚙</button>
-  <button class="btn primary" id="btnNew">Nuevo</button>
 </header>
 
 <nav id="tabs"></nav>
@@ -463,7 +467,7 @@ function defaultDoc(){
    {id:'v_board',name:'Tablero',icon:'▥',kind:'board',smart:'open',builtin:1,filters:[],sort:{prop:'date',dir:1},group:'status',cols:['name','date'],updatedAt:0},
   ],
   settings:{theme:'dark',accent:'#2383e2',clientId:'',autoSync:true,calSync:false,calId:'primary',calDurationMin:60,
-    defaultVisibleProps:['date','status','desc'],updatedAt:0},
+    defaultVisibleProps:['date','status','desc'],pinnedViews:['v_all','v_today','v_cal'],updatedAt:0},
  };
 }
 
@@ -629,29 +633,80 @@ function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show'
 /* ============================ RENDER RAÍZ ============================ */
 function render(){renderTabs();renderToolbar();renderMain();if(openId)renderDrawer();if(section==='notes')renderNotes();}
 
+let tempView=null;   // vista abierta desde «⋯ Más», visible sólo mientras se usa
+function pinnedIds(){
+ const all=D.views.filter(v=>!v.hidden).map(v=>v.id);
+ return (D.settings.pinnedViews||[]).filter(id=>all.includes(id));
+}
 function renderTabs(){
  const nav=$('#tabs');nav.innerHTML='';
- D.views.filter(v=>!v.hidden).forEach(v=>{
+ let pins=pinnedIds();
+ if(!pins.length)pins=[cur];                      // nunca dejar la barra vacía
+ const mkTab=(v,opts)=>{
+  opts=opts||{};
   const b=document.createElement('button');
-  b.className='tab'+(v.id===cur?' on':'');b.draggable=true;b.dataset.id=v.id;
-  b.innerHTML=`<span>${esc(v.icon||'▦')}</span><span>${esc(v.name)}</span><span class="more" title="Opciones de vista">⋯</span>`;
+  b.className='tab'+(v.id===cur?' on':'')+(opts.temp?' temp':'');
+  b.draggable=!opts.temp;b.dataset.id=v.id;
+  b.innerHTML=`<span>${esc(v.icon||'▦')}</span><span>${esc(v.name)}</span>`+
+    (opts.temp?`<span class="closetab" data-closetab title="Cerrar">✕</span>`
+              :`<span class="more" title="Opciones de vista">⋯</span>`);
   b.onclick=e=>{
-   if(e.target.classList.contains('more')){viewMenu(v,b);return;}
-   if(cur===v.id){viewMenu(v,b);return;}
-   cur=v.id;selIds.clear();showN=200;render();
+   if(e.target.dataset.closetab!==undefined){tempView=null;cur=pinnedIds()[0]||D.views.find(x=>!x.hidden).id;render();return;}
+   if(e.target.classList.contains('more')||cur===v.id){viewMenu(v,b);return;}
+   cur=v.id;selIds&&selIds.clear&&selIds.clear();showN=200;render();
   };
-  b.ondragstart=e=>{e.dataTransfer.setData('view',v.id);e.dataTransfer.effectAllowed='move';};
-  b.ondragover=e=>{if(e.dataTransfer.types.includes('view')){e.preventDefault();b.classList.add('dragover');}};
-  b.ondragleave=()=>b.classList.remove('dragover');
-  b.ondrop=e=>{e.preventDefault();b.classList.remove('dragover');
-   const src=e.dataTransfer.getData('view');if(!src||src===v.id)return;
-   const a=D.views.findIndex(x=>x.id===src),z=D.views.findIndex(x=>x.id===v.id);
-   const[m]=D.views.splice(a,1);D.views.splice(z,0,m);m.updatedAt=nowISO();save();};
+  if(!opts.temp){
+   b.ondragstart=e=>{e.dataTransfer.setData('view',v.id);e.dataTransfer.effectAllowed='move';};
+   b.ondragover=e=>{if(e.dataTransfer.types.includes('view')){e.preventDefault();b.classList.add('dragover');}};
+   b.ondragleave=()=>b.classList.remove('dragover');
+   b.ondrop=e=>{e.preventDefault();b.classList.remove('dragover');
+    const src=e.dataTransfer.getData('view');if(!src||src===v.id)return;
+    const a=D.views.findIndex(x=>x.id===src),z=D.views.findIndex(x=>x.id===v.id);
+    const[m]=D.views.splice(a,1);D.views.splice(z,0,m);m.updatedAt=nowISO();save();};
+  }
   nav.appendChild(b);
- });
+ };
+ pins.forEach(id=>{const v=view(id);if(v)mkTab(v);});
+ // vista temporal (abierta desde el desplegable y no anclada)
+ if(cur&&!pins.includes(cur)){const v=view(cur);if(v&&!v.hidden)mkTab(v,{temp:true});}
+ // botón «⋯ Más» si hay vistas no ancladas
+ const rest=D.views.filter(v=>!v.hidden&&!pins.includes(v.id)&&v.id!==cur);
+ if(rest.length){
+  const more=document.createElement('button');more.id='moreView';more.className='tab';
+  more.innerHTML='<span>⋯</span><span>Más</span>';
+  more.onclick=()=>moreViewMenu(more);
+  nav.appendChild(more);
+ }
  const add=document.createElement('button');add.id='addView';add.className='tab';add.textContent='+ Vista nueva';
  add.onclick=()=>newViewMenu(add);
  nav.appendChild(add);
+}
+function moreViewMenu(anchor){
+ const pins=pinnedIds();
+ const rest=D.views.filter(v=>!v.hidden&&!pins.includes(v.id));
+ openPop(`<div class="mhead">Más vistas</div>
+  ${rest.map(v=>`<div class="mi listrow" style="cursor:default">
+     <span class="nm" data-openview="${v.id}" style="cursor:pointer;flex:1">${esc(v.icon||'▦')} ${esc(v.name)}</span>
+     <button class="pinbtn" data-pinview="${v.id}" title="Anclar">📌</button></div>`).join('')
+   ||'<div class="mi" style="cursor:default;color:var(--tx3)">No hay más vistas</div>'}`,
+  anchor,pp=>{
+   pp.querySelectorAll('[data-openview]').forEach(b=>b.onclick=()=>{
+    tempView=b.dataset.openview;cur=b.dataset.openview;showN=200;closePop();render();});
+   pp.querySelectorAll('[data-pinview]').forEach(b=>b.onclick=()=>{
+    pinView(b.dataset.pinview);closePop();render();});
+  });
+}
+function pinView(id){
+ const p=D.settings.pinnedViews||(D.settings.pinnedViews=[]);
+ if(!p.includes(id))p.push(id);
+ if(tempView===id)tempView=null;
+ D.settings.updatedAt=nowISO();save();
+}
+function unpinView(id){
+ D.settings.pinnedViews=(D.settings.pinnedViews||[]).filter(x=>x!==id);
+ D.settings.updatedAt=nowISO();
+ if(cur===id)tempView=id;         // sigue visible como temporal mientras se use
+ save();
 }
 
 function viewMenu(v,anchor){
@@ -661,6 +716,7 @@ function viewMenu(v,anchor){
   ${['table|▦ Tabla','calendar|📅 Calendario','board|▥ Tablero'].map(s=>{const[k,n]=s.split('|');
     return`<button class="mi ${v.kind===k?'sel':''}" data-k="${k}"><span class="mic">${v.kind===k?'✓':''}</span>${n}</button>`;}).join('')}
   <div class="msep"></div>
+  <button class="mi" data-a="${pinnedIds().includes(v.id)?'unpin':'pin'}"><span class="mic">📌</span>${pinnedIds().includes(v.id)?'Desanclar de la barra':'Anclar a la barra'}</button>
   <button class="mi" data-a="dup"><span class="mic">⧉</span>Duplicar vista</button>
   <button class="mi" data-a="hide"><span class="mic">◌</span>Ocultar vista</button>
   ${v.builtin?'':'<button class="mi" data-a="del" style="color:var(--err)"><span class="mic">🗑</span>Eliminar vista</button>'}
@@ -671,6 +727,8 @@ function viewMenu(v,anchor){
   p.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{v.kind=b.dataset.k;v.updatedAt=nowISO();save();closePop();});
   p.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{
    const a=b.dataset.a;
+   if(a==='pin'){pinView(v.id);closePop();render();return;}
+   if(a==='unpin'){unpinView(v.id);closePop();render();return;}
    if(a==='dup'){const c=JSON.parse(JSON.stringify(v));c.id=uid('v');c.name=v.name+' (copia)';c.builtin=0;c.updatedAt=nowISO();
      D.views.splice(D.views.indexOf(v)+1,0,c);cur=c.id;}
    if(a==='hide'){v.hidden=true;v.updatedAt=nowISO();if(cur===v.id)cur=D.views.find(x=>!x.hidden).id;}
@@ -953,7 +1011,7 @@ function renderTable(main,v){
 
  html+=`<tr class="newrow"><td colspan="${cols.length+2}" id="rowNew">＋ Nueva tarea</td></tr></tbody></table>`;
  if(list.length>showN)html+=`<button class="btn" id="morebtn">Mostrar más (${list.length-showN} restantes)</button>`;
- if(!list.length)html+=`<div class="empty"><b>Sin tareas aquí</b>Crea una con el botón «Nuevo» o «＋ Nueva tarea».</div>`;
+ if(!list.length)html+=`<div class="empty"><b>Sin tareas aquí</b>Crea una con «＋ Nueva tarea», o desde el calendario.</div>`;
  main.innerHTML=html;
 
  /* eventos */
@@ -2195,22 +2253,33 @@ setInterval(()=>{if(D&&D.settings.calSync&&navigator.onLine)pushCalendar(false);
 addEventListener('online',()=>{syncUI();if(M.driveOn&&M.pending>0)syncNow(false);if(D&&D.settings.calSync)pushCalendar(false);});
 addEventListener('offline',syncUI);
 
+/* Estado de sincronización en un solo icono, sin palabras. Regla:
+   pendiente es pendiente (⌛) sea cual sea la causa; ✅ = a salvo en la nube,
+   🏠 = sólo en este dispositivo. El calendario no afecta a este icono. */
+function syncState(){
+ if(M.lastError)return{ic:'🔴',txt:'Error de sincronización'+(typeof M.lastError==='string'?': '+M.lastError:'')};
+ if(syncing)return{ic:'♻️',txt:'Sincronizando…'};
+ if(M.pending>0)return{ic:'⌛',txt:M.pending+' cambio'+(M.pending===1?'':'s')+' pendiente'+(M.pending===1?'':'s')+(navigator.onLine?'':' · sin conexión')};
+ if(M.driveOn)return{ic:'✅',txt:'Sincronizado'+(M.lastSync?' · '+relTime(M.lastSync):'')+(navigator.onLine?'':' · sin conexión')};
+ return{ic:'🏠',txt:'Sólo en este dispositivo'+(navigator.onLine?'':' · sin conexión')};
+}
 function syncUI(){
- const dot=$('#syncDot'),txt=$('#syncTxt');
- if(!dot)return;
- let cls='',label='';
- if(!M.driveOn){cls=M.pending>0?'':'';label='Local'+(navigator.onLine?'':' · sin conexión');}
- else if(syncing){cls='warn';label='Sincronizando…';}
- else if(M.lastError){cls='err';label='Error de sincronización';}
- else if(!navigator.onLine){cls='warn';label='Sin conexión · '+M.pending+' pendientes';}
- else if(M.pending>0){cls='warn';label=M.pending+' cambios pendientes';}
- else{cls='ok';label='Sincronizado';}
- dot.className='dot '+cls;txt.textContent=label;
+ const chip=$('#syncChip');if(!chip)return;
+ const s=syncState();
+ chip.innerHTML=`<span class="sicon">${s.ic}</span>`;
+ chip.title=s.txt;
+}
+function relTime(iso){
+ const d=Date.now()-new Date(iso).getTime();
+ if(d<60000)return'hace un momento';
+ if(d<3600000)return'hace '+Math.round(d/60000)+' min';
+ if(d<86400000)return'hace '+Math.round(d/3600000)+' h';
+ return'hace '+Math.round(d/86400000)+' días';
 }
 $('#syncChip').onclick=e=>{
  openPop(`
   <div class="mhead">Sincronización</div>
-  <div class="mi" style="cursor:default">Estado: <b style="margin-left:4px">${M.driveOn?(M.lastError?'🔴 Error':(M.pending?'🟡 Pendiente':'🟢 Al día')):'💾 Solo local'}</b></div>
+  <div class="mi" style="cursor:default">${syncState().ic}&nbsp;<b>${esc(syncState().txt)}</b></div>
   <div class="mi" style="cursor:default">Última sincronización:&nbsp;<span style="color:var(--tx2)">${M.lastSync?fmtDT(M.lastSync):'nunca'}</span></div>
   <div class="mi" style="cursor:default">Cambios pendientes:&nbsp;<b>${M.pending}</b></div>
   ${M.lastError?`<div class="mi" style="cursor:default;color:var(--err)">${esc(M.lastError)}</div>`:''}
@@ -2226,7 +2295,7 @@ $('#syncChip').onclick=e=>{
 };
 
 /* ============================ GLOBAL ============================ */
-$('#btnNew').onclick=()=>{const t=newTask(view(cur).smart==='today'?{date:todayStr()}:{});save();openDrawer(t.id);setTimeout(()=>$('#dTitle').focus(),60);};
+function createTask(){const t=newTask(view(cur).smart==='today'?{date:todayStr()}:{});save();openDrawer(t.id);setTimeout(()=>{const e=$('#dTitle');if(e)e.focus();},60);return t;}
 $('#btnSettings').onclick=openSettings;
 $('#search').oninput=e=>{searchQ=e.target.value.trim();showN=200;renderMain();renderToolbar();};
 function updSearchModeBtn(){const b=$('#searchMode');if(!b)return;
@@ -2252,7 +2321,7 @@ document.addEventListener('keydown',e=>{
   }
   closeDrawer();}
  if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();$('#search').focus();}
- if(e.key==='n'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$('#btnNew').click();}
+ if(e.key==='n'&&section==='tasks'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)&&!e.ctrlKey&&!e.metaKey){e.preventDefault();createTask();}
 });
 
 /* ============================ ARRANQUE ============================ */
@@ -2287,12 +2356,13 @@ function migrate(){
  if(!Array.isArray(s.defaultVisibleProps))s.defaultVisibleProps=['date','status','desc'];
  if(s.calDurationMin==null)s.calDurationMin=60;
  if(!Array.isArray(D.notes))D.notes=[];
+ if(!Array.isArray(s.pinnedViews))s.pinnedViews=['v_all','v_today','v_cal'].filter(id=>D.views.some(v=>v.id===id));
  migrateNoteRefs();
  /* Nota: las propiedades que ya tienen datos en una tarea siguen visibles en
     esa tarea por la regla hasValue(), así que no hace falta tocar drawerShow
     de los usuarios existentes: nada desaparece y las tareas nuevas quedan
     limpias, que es justo lo pedido. */
- D.version=Math.max(D.version||1,3);
+ D.version=Math.max(D.version||1,4);
 }
 async function boot(){
  await idb.open();
