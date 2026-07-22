@@ -286,6 +286,8 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
 .th-in{display:flex;align-items:center;gap:2px}
 .sortbtn{background:none;border:none;color:var(--tx3);cursor:pointer;padding:1px 4px;font-size:12px;flex:none}
 .sortbtn:hover{color:var(--acc)}
+.dbtype{background:var(--bg3);border:1px solid var(--line2);border-radius:4px;color:var(--tx2);cursor:pointer;padding:2px 7px;font-size:12px;margin-top:2px;min-width:30px}
+.dbtype:hover{color:var(--tx);border-color:var(--tx3)}
 .blk-search-t{background:none;border:none;color:var(--tx3);cursor:pointer;padding:2px 6px;font-size:13px;flex:none}
 .blk-search-t.on,.blk-search-t:hover{color:var(--acc)}
 .blk-searchbar{padding:6px 8px;border-bottom:1px solid var(--line)}
@@ -1408,6 +1410,7 @@ const BLOCK_TYPES={md:{n:'Texto (Markdown)',ic:'≡'},table:{n:'Tabla',ic:'▦'}
    añaden Markdown (fase 7). */
 const TASK_BLOCKS=['table','db','todo'];
 const DB_TYPES={text:'Texto',number:'Número',select:'Selección',checkbox:'Casilla',date:'Fecha'};
+const DB_TYPE_IC={text:'Aa',number:'#',select:'▾',checkbox:'☑',date:'📅'};
 
 const blocksOf=o=>(o.blocks=o.blocks||[]);
 function newBlock(type){
@@ -1569,9 +1572,7 @@ function renderDbBlock(box,b,owner){
       <input type="text" data-dbpname="${p.id}" value="${esc(p.name)}">
       <button class="sortbtn" data-sort="${p.id}" title="Ordenar">${sortIc(p.id)}</button>
       <button class="xcol" data-dbpdel="${p.id}" title="Eliminar columna">✕</button></div>
-      <select data-dbptype="${p.id}" title="Tipo de columna">
-        ${Object.entries(DB_TYPES).map(([k,n])=>`<option value="${k}" ${p.type===k?'selected':''}>${n}</option>`).join('')}
-      </select></th>`).join('')}
+      <button class="dbtype" data-dbptype="${p.id}" title="Tipo: ${DB_TYPES[p.type]||p.type}">${DB_TYPE_IC[p.type]||'Aa'}</button></th>`).join('')}
    <th class="xcol"><button class="blk-add" data-dbaddprop title="Añadir columna">＋</button></th></tr></thead>
   <tbody>${view.map(r=>`<tr data-row="${r.id}">
     ${b.props.map(p=>`<td>${dbCellHTML(b,r,p)}</td>`).join('')}
@@ -1585,9 +1586,15 @@ function renderDbBlock(box,b,owner){
   b.rows.push({id:uid('r'),v:{}});blkChanged(owner,b,true);};
  box.querySelectorAll('[data-dbpname]').forEach(i=>i.onchange=()=>{
   const p=b.props.find(x=>x.id===i.dataset.dbpname);if(p)p.name=i.value;blkChanged(owner,b,false);});
- box.querySelectorAll('[data-dbptype]').forEach(s=>s.onchange=()=>{
-  const p=b.props.find(x=>x.id===s.dataset.dbptype);if(!p)return;
-  p.type=s.value;if(p.type==='select')p.options=p.options||[];blkChanged(owner,b,true);});
+ box.querySelectorAll('[data-dbptype]').forEach(btn=>btn.onclick=()=>{
+  const p=b.props.find(x=>x.id===btn.dataset.dbptype);if(!p)return;
+  openPop(`<div class="mhead">Tipo de columna</div>
+   ${Object.entries(DB_TYPES).map(([k,n])=>
+    `<button class="mi" data-dbtype="${k}"><span class="mic" style="width:20px;text-align:center">${DB_TYPE_IC[k]}</span>${n}${p.type===k?' ✓':''}</button>`).join('')}`,
+   btn,pp=>pp.querySelectorAll('[data-dbtype]').forEach(o=>o.onclick=()=>{
+    p.type=o.dataset.dbtype;if(p.type==='select')p.options=p.options||[];
+    closePop();blkChanged(owner,b,true);}));
+ });
  box.querySelectorAll('[data-dbpdel]').forEach(btn=>btn.onclick=()=>{
   b.props=b.props.filter(p=>p.id!==btn.dataset.dbpdel);
   b.rows.forEach(r=>delete r.v[btn.dataset.dbpdel]);blkChanged(owner,b,true);});
