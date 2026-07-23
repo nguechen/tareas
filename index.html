@@ -288,6 +288,11 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
 .sortbtn:hover{color:var(--acc)}
 .dbtype{background:var(--bg3);border:1px solid var(--line2);border-radius:4px;color:var(--tx2);cursor:pointer;padding:2px 7px;font-size:12px;margin-top:2px;min-width:30px}
 .dbtype:hover{color:var(--tx);border-color:var(--tx3)}
+.md-bar{display:flex;flex-wrap:wrap;gap:3px;padding:5px 6px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.mdb{background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);color:var(--tx2);
+  cursor:pointer;padding:5px 11px;font-size:13px;line-height:1;min-width:34px}
+.mdb:hover{color:var(--tx);border-color:var(--tx3)}
+.mdb:active{background:var(--acc);color:#fff}
 .blk-copy-t{background:none;border:none;color:var(--tx3);cursor:pointer;padding:2px 6px;font-size:13px;flex:none}
 .blk-copy-t:hover{color:var(--acc)}
 .blk-search-t{background:none;border:none;color:var(--tx3);cursor:pointer;padding:2px 6px;font-size:13px;flex:none}
@@ -1797,6 +1802,52 @@ function mdToHtml(src){
   .replace(/\u0000F(\d+)\u0000/g,(m,n)=>'<pre><code>'+fences[+n]+'</code></pre>');
 }
 /* ---------- Bloque de texto Markdown (lo usan las notas) ---------- */
+/* ---------- Barra de formato Markdown ----------
+   El menú del sistema (Copiar/Pegar) no se puede extender, así que el formato
+   vive aquí dentro. Los botones actúan en `mousedown` con preventDefault: si
+   usaran `click`, el toque desenfocaría el textarea (que hace commit al perder
+   el foco) y se perdería la selección antes de poder leerla. */
+const MD_FMT=[
+ {k:'B',ic:'<b>B</b>',t:'Negrita',w:'**'},
+ {k:'I',ic:'<i>I</i>',t:'Cursiva',w:'*'},
+ {k:'S',ic:'<s>S</s>',t:'Tachado',w:'~~'},
+ {k:'code',ic:'&lt;/&gt;',t:'Código',w:'`'},
+ {k:'h',ic:'H',t:'Título',p:'# '},
+ {k:'ul',ic:'•',t:'Lista',p:'- '},
+ {k:'quote',ic:'❝',t:'Cita',p:'> '}
+];
+function mdApplyWrap(ta,m){
+ const v=ta.value,s=ta.selectionStart,e=ta.selectionEnd,L=m.length,ch=m[0];
+ if(s===e){                                   /* sin selección: marcadores con el cursor en medio */
+  ta.value=v.slice(0,s)+m+m+v.slice(s);
+  ta.setSelectionRange(s+L,s+L);return;
+ }
+ /* Hay que CONTAR los marcadores pegados a cada lado, no sólo mirar si están:
+    `*` es prefijo de `**`, así que con **hola** y «hola» seleccionado, un
+    simple "¿empieza por *?" creería que ya hay cursiva y la quitaría.
+    Racha 1=cursiva, 2=negrita, 3=ambas. */
+ let bn=0;while(v[s-bn-1]===ch)bn++;
+ let an=0;while(v[e+an]===ch)an++;
+ const run=Math.min(bn,an);
+ const wrapped=ch==='*'?(L===1?run%2===1:run>=2):run>=L;
+ if(wrapped){                                 /* ya envuelto: desenvolver */
+  ta.value=v.slice(0,s-L)+v.slice(s,e)+v.slice(e+L);
+  ta.setSelectionRange(s-L,e-L);
+ }else{
+  ta.value=v.slice(0,s)+m+v.slice(s,e)+m+v.slice(e);
+  ta.setSelectionRange(s+L,e+L);              /* la selección sigue sobre el texto: los formatos se apilan */
+ }
+}
+function mdApplyPrefix(ta,p){
+ const v=ta.value,s=ta.selectionStart,e=ta.selectionEnd;
+ const ls=v.lastIndexOf('\n',s-1)+1;          /* inicio de la primera línea tocada */
+ let le=v.indexOf('\n',e);if(le<0)le=v.length;/* fin de la última */
+ const lines=v.slice(ls,le).split('\n');
+ const all=lines.every(l=>l.startsWith(p));   /* si todas lo tienen, se quita */
+ ta.value=v.slice(0,ls)+lines.map(l=>all?l.slice(p.length):p+l).join('\n')+v.slice(le);
+ const d=all?-p.length:p.length;
+ ta.setSelectionRange(Math.max(ls,s+d),Math.max(ls,e+d*lines.length));
+}
 function renderMdBlock(box,b,owner){
  const view=()=>{
   box.innerHTML=`<div class="md" data-mdview>${b.text?mdToHtml(b.text)
@@ -1807,11 +1858,20 @@ function renderMdBlock(box,b,owner){
    edit();};
  };
  const edit=()=>{
-  box.innerHTML=`<textarea data-mdedit rows="1">${esc(b.text||'')}</textarea>`;
+  box.innerHTML=`<div class="md-bar" data-mdbar>${MD_FMT.map(f=>
+    `<button class="mdb" data-md="${f.k}" title="${f.t}">${f.ic}</button>`).join('')}</div>
+   <textarea data-mdedit rows="1">${esc(b.text||'')}</textarea>`;
   const ta=box.querySelector('[data-mdedit]');
   const grow=()=>{ta.style.height='auto';ta.style.height=(ta.scrollHeight||34)+'px';};
   grow();ta.oninput=grow;
   ta.focus();try{const L=ta.value.length;ta.setSelectionRange(L,L);}catch(_){}
+  box.querySelectorAll('[data-md]').forEach(btn=>{
+   const f=MD_FMT.find(x=>x.k===btn.dataset.md);
+   btn.onmousedown=ev=>{
+    ev.preventDefault();                          // no robar el foco al textarea
+    if(f.w)mdApplyWrap(ta,f.w);else mdApplyPrefix(ta,f.p);
+    grow();ta.focus();};
+  });
   let done=false;
   const commit=ok=>{if(done)return;done=true;
    if(ok&&ta.value!==(b.text||'')){b.text=ta.value;blkChanged(owner,b,false);}
