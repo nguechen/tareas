@@ -288,6 +288,8 @@ table.btable{border-collapse:collapse;width:100%;font-size:13px}
 .sortbtn:hover{color:var(--acc)}
 .dbtype{background:var(--bg3);border:1px solid var(--line2);border-radius:4px;color:var(--tx2);cursor:pointer;padding:2px 7px;font-size:12px;margin-top:2px;min-width:30px}
 .dbtype:hover{color:var(--tx);border-color:var(--tx3)}
+.blk-copy-t{background:none;border:none;color:var(--tx3);cursor:pointer;padding:2px 6px;font-size:13px;flex:none}
+.blk-copy-t:hover{color:var(--acc)}
 .blk-search-t{background:none;border:none;color:var(--tx3);cursor:pointer;padding:2px 6px;font-size:13px;flex:none}
 .blk-search-t.on,.blk-search-t:hover{color:var(--acc)}
 .blk-searchbar{padding:6px 8px;border-bottom:1px solid var(--line)}
@@ -1463,10 +1465,65 @@ function blkViewRows(rows,getVal,st){
   view=view.slice().sort((A,B)=>blkCompare(getVal(A.r,col),getVal(B.r,col),type,dir)|| (A.i-B.i));}
  return view.map(x=>x.r);
 }
+/* ---------- Copiar elementos al portapapeles ----------
+   Escribe dos representaciones a la vez: text/html (una <table> para
+   tablas/BD, que Sheets y Excel leen como celdas) y text/plain (TSV o el
+   markdown/lista crudo). Todo valor de celda se escapa: copiar es una
+   salida, así que el contenido del usuario es texto no confiable. */
+async function copyToClipboard(html,text){
+ try{
+  if(navigator.clipboard&&window.ClipboardItem){
+   await navigator.clipboard.write([new ClipboardItem({
+    'text/html':new Blob([html],{type:'text/html'}),
+    'text/plain':new Blob([text],{type:'text/plain'})})]);
+  }else if(navigator.clipboard&&navigator.clipboard.writeText){
+   await navigator.clipboard.writeText(text);
+  }else{
+   const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+   document.body.appendChild(ta);ta.focus();ta.select();document.execCommand('copy');document.body.removeChild(ta);
+  }
+  toast('Copiado');
+ }catch(err){toast('No se pudo copiar');}
+}
+const dbCellText=(b,r,p)=>{
+ const v=r.v[p.id];
+ if(p.type==='checkbox')return v?'✓':'✗';
+ if(v==null||v==='')return'';
+ return String(v);
+};
+function blockToClipboard(b){
+ if(b.type==='table'){
+  const head=b.cols.map(c=>c.name);
+  const rows=b.rows.map(r=>b.cols.map(c=>r.cells[c.id]||''));
+  const grid=[head,...rows];
+  const html='<table>'+grid.map((row,i)=>'<tr>'+row.map(cell=>`<${i?'td':'th'}>${esc(cell)}</${i?'td':'th'}>`).join('')+'</tr>').join('')+'</table>';
+  const text=grid.map(row=>row.join('\t')).join('\n');
+  return{html,text};
+ }
+ if(b.type==='db'){
+  const head=b.props.map(p=>p.name);
+  const rows=b.rows.map(r=>b.props.map(p=>dbCellText(b,r,p)));
+  const grid=[head,...rows];
+  const html='<table>'+grid.map((row,i)=>'<tr>'+row.map(cell=>`<${i?'td':'th'}>${esc(cell)}</${i?'td':'th'}>`).join('')+'</tr>').join('')+'</table>';
+  const text=grid.map(row=>row.join('\t')).join('\n');
+  return{html,text};
+ }
+ if(b.type==='todo'){
+  const text=b.items.map(it=>`- [${it.done?'x':' '}] ${it.text||''}`).join('\n');
+  return{html:'<pre>'+esc(text)+'</pre>',text};
+ }
+ // md (u otros): markdown crudo
+ const text=b.text||'';
+ return{html:'<pre>'+esc(text)+'</pre>',text};
+}
+function copyBlock(b){const{html,text}=blockToClipboard(b);copyToClipboard(html,text);}
+
 function blkTopControls(b){
- /* devuelve el HTML de la lupa para la barra superior del bloque */
+ /* barra superior del bloque: lupa (si aplica) + copiar */
  const st=blkState(b.id);
- return `<button class="blk-search-t ${st.q?'on':''}" data-blksearch title="Buscar en este elemento">🔍</button>`;
+ const search=['table','db','todo'].includes(b.type)
+   ?`<button class="blk-search-t ${st.q?'on':''}" data-blksearch title="Buscar en este elemento">🔍</button>`:'';
+ return search+`<button class="blk-copy-t" data-blkcopy title="Copiar elemento">📋</button>`;
 }
 function renderBlocks(box,owner){
  box.innerHTML='';
@@ -1474,11 +1531,13 @@ function renderBlocks(box,owner){
   const el=document.createElement('div');el.className='blk';el.dataset.b=b.id;
   el.innerHTML=`<div class="blk-top"><span>${BLOCK_TYPES[b.type]?BLOCK_TYPES[b.type].ic:'▦'}</span>
     <input class="blk-title" data-blktitle value="${esc(b.title||'')}" placeholder="${BLOCK_TYPES[b.type]?BLOCK_TYPES[b.type].n:'Elemento'}">
-    ${['table','db','todo'].includes(b.type)?blkTopControls(b):''}
+    ${blkTopControls(b)}
     <button class="iconbtn" data-blkdel title="Eliminar elemento">✕</button></div>
    ${['table','db','todo'].includes(b.type)?`<div class="blk-searchbar" data-searchbar style="display:${blkState(b.id).q?'block':'none'}"><input class="blk-q" data-blkq placeholder="Filtrar…" value="${esc(blkState(b.id).q)}"></div>`:''}
    <div class="blk-body"></div>`;
   el.querySelector('[data-blktitle]').onchange=e=>{b.title=e.target.value;blkChanged(owner,b,false);};
+  const cBtn=el.querySelector('[data-blkcopy]');
+  if(cBtn)cBtn.onclick=()=>copyBlock(b);
   const sBtn=el.querySelector('[data-blksearch]');
   if(sBtn)sBtn.onclick=()=>{
    const st=blkState(b.id);const bar=el.querySelector('[data-searchbar]');
